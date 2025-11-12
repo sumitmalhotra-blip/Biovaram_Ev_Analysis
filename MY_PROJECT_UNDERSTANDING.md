@@ -11,11 +11,11 @@
 
 "We're building an **automated data analysis platform** for Bio Varam to help them analyze **exosomes** (tiny vesicles from stem cells that could be used in therapies). 
 
-Right now, they have **156 data files** from two different machines - **nanoFACS** (flow cytometry) and **NTA** (particle tracking) - but they're analyzing everything manually in Excel. 
+They're currently analyzing data manually in Excel from two different machines - **nanoFACS** (flow cytometry) and **NTA** (particle tracking). We have **156 sample files for reference and development**, but they have **much larger datasets** that they'll process using this system.
 
-My job is to build a **Python-based system** that will automatically process these files, run statistical analysis, generate visualizations, and eventually use machine learning to do quality control and detect patterns. 
+My job is to build a **scalable Python-based system** that will automatically process hundreds/thousands of files, run statistical analysis, generate visualizations, and use machine learning for quality control and pattern detection. 
 
-The end goal is a **web dashboard** where scientists can upload files and get instant analysis reports."
+The end goal is a **web dashboard** where scientists can upload files and get instant analysis reports, handling production-scale data volumes."
 
 ---
 
@@ -52,18 +52,21 @@ The end goal is a **web dashboard** where scientists can upload files and get in
 ## 💻 What I Need to Build
 
 ### **Phase 1: Data Processing (Weeks 1-4)**
-**My understanding:** Build robust parsers to automatically read and clean data
+**My understanding:** Build robust, scalable parsers to automatically read and clean large volumes of data
 
-- **Task 1.1:** Enhance FCS parser to handle batch processing
+- **Task 1.1:** Enhance FCS parser to handle batch processing at scale
   - Current: One file at a time manually
-  - Goal: Process 100+ files automatically, extract 26 parameters
+  - Goal: Process hundreds/thousands of files automatically, extract 26 parameters
+  - Must handle production-scale data volumes efficiently
   
 - **Task 1.2:** Build NTA parser for particle tracking files
   - Parse text files, extract size distributions
+  - Optimize for batch processing large datasets
   
 - **Task 1.3:** Create unified data structure
   - Combine data from both machines into one format
-  - Make it easy to compare experiments
+  - Make it easy to compare experiments across large datasets
+  - Implement efficient storage and retrieval for high-volume data
 
 ### **Phase 2: Analysis & Visualization (Weeks 5-8)**
 **My understanding:** Create standard analysis workflows and charts
@@ -108,12 +111,14 @@ The end goal is a **web dashboard** where scientists can upload files and get in
 
 ## 🗂️ The Data I'm Working With
 
-### **Current Inventory:**
+### **Sample Dataset for Development:**
 - **70 FCS files** (~3.5GB) - Flow cytometry data
 - **86 NTA files** (~2.5MB) - Particle tracking data
-- **156 total files** representing different experiments
+- **156 total SAMPLE files** representing different experiments
 
-### **Experiment Types I See:**
+**IMPORTANT:** These are reference/sample files for development and testing. The actual production system will handle **much larger datasets** with potentially hundreds or thousands of files per analysis run.
+
+### **Experiment Types I See (in samples):**
 1. **Exosome characterization** - Measuring size, markers, purity
 2. **Antibody titration** - Testing different antibody amounts (0.25ug, 0.5ug, 1ug, 2ug)
 3. **Method comparison** - SEC vs centrifugation purification
@@ -162,43 +167,52 @@ The end goal is a **web dashboard** where scientists can upload files and get in
 4. ❓ What's the acceptable range for size and concentration?
 
 ### **Technical Requirements:**
-5. ✅ Should I process all 156 files or are some just test runs?
-6. ❓ What's the priority order for features?
-7. ❓ Who are the end users - lab technicians, scientists, or both?
-8. ❓ Do they need real-time processing or batch overnight processing?
+5. ✅ The 156 files are sample/reference data for development - production will have much larger volumes
+6. ❓ What are the expected data volumes in production? (files per day/week/month?)
+7. ❓ What's the priority order for features?
+8. ❓ Who are the end users - lab technicians, scientists, or both?
+9. ❓ Do they need real-time processing or batch overnight processing?
+10. ❓ What are the performance requirements? (e.g., process 1000 files in X hours?)
 
 ### **Workflow & Integration:**
-9. ❓ Will data come directly from machines or uploaded manually?
-10. ❓ Should results integrate with their existing LIMS/ELN systems?
-11. ❓ What format do they want for final reports (PDF, Excel, web view)?
-12. ❓ Do they need to track historical trends across months?
+11. ❓ Will data come directly from machines or uploaded manually?
+12. ❓ Should results integrate with their existing LIMS/ELN systems?
+13. ❓ What format do they want for final reports (PDF, Excel, web view)?
+14. ❓ Do they need to track historical trends across months?
+15. ❓ What's the data retention policy? How much historical data to store?
 
 ### **Success Criteria:**
-13. ❓ What would make this project successful in 3 months?
-14. ❓ Is the goal to replace manual analysis 100% or just speed it up?
-15. ❓ Are there specific analyses they currently can't do that they want?
+16. ❓ What would make this project successful in 3 months?
+17. ❓ Is the goal to replace manual analysis 100% or just speed it up?
+18. ❓ Are there specific analyses they currently can't do that they want?
+19. ❓ What's the expected throughput? (files processed per hour/day?)
+20. ❓ Any specific scalability requirements or future growth projections?
 
 ---
 
 ## ✅ What I'm Confident About
 
-1. **The Problem:** Manual analysis is slow and they need automation
-2. **The Data:** I have 156 files from two different instruments
-3. **The Goal:** Build a Python pipeline that goes from raw files → analyzed reports
-4. **The Science:** I understand what exosomes are and why they're measuring them
-5. **The Tech:** I know what tools to use (Python, pandas, fcsparser, etc.)
-6. **The Timeline:** 11-13 weeks for full system with 4 phases
-7. **My Role:** Senior Python developer building the entire data pipeline
+1. **The Problem:** Manual analysis is slow and they need automation for large-scale data processing
+2. **The Data:** I have 156 sample/reference files from two different instruments for development
+3. **The Scale:** Production system will handle much larger datasets than the 156 samples
+4. **The Goal:** Build a scalable Python pipeline that goes from raw files → analyzed reports
+5. **The Science:** I understand what exosomes are and why they're measuring them
+6. **The Tech:** I know what tools to use (Python, pandas, fcsparser, etc.) with focus on scalability
+7. **The Timeline:** 11-13 weeks for full system with 4 phases
+8. **My Role:** Senior Python developer building the entire data pipeline with production-scale architecture
 
 ## ❓ What I Need Clarification On
 
-1. **Exact Business Requirements:** What specific analyses are most critical?
-2. **User Workflows:** How will scientists actually use this system daily?
-3. **Quality Thresholds:** What are the acceptance criteria for batches?
-4. **Integration Needs:** Does this need to connect to other systems?
-5. **Deployment Environment:** On-premises server or cloud?
-6. **Team Structure:** Who else is working on this? Am I solo?
-7. **Meeting Notes Context:** What was decided in the first kickoff meeting?
+1. **Data Volume & Scale:** How many files per day/week/month in production?
+2. **Performance Requirements:** What are the expected processing speeds and throughput?
+3. **Exact Business Requirements:** What specific analyses are most critical?
+4. **User Workflows:** How will scientists actually use this system daily?
+5. **Quality Thresholds:** What are the acceptance criteria for batches?
+6. **Integration Needs:** Does this need to connect to other systems?
+7. **Deployment Environment:** On-premises server or cloud? What infrastructure?
+8. **Scalability:** Any future growth projections? Need to handle 10x data in 2 years?
+9. **Team Structure:** Who else is working on this? Am I solo?
+10. **Meeting Notes Context:** What was decided in the first kickoff meeting?
 
 ---
 
@@ -223,7 +237,7 @@ The end goal is a **web dashboard** where scientists can upload files and get in
 
 ## 🎤 Elevator Pitch (15 seconds)
 
-> "I'm building an automated analysis system for Bio Varam that takes raw data files from their exosome characterization machines and turns them into statistical reports and quality control predictions, replacing their current manual Excel-based workflow."
+> "I'm building a scalable automated analysis system for Bio Varam that processes large volumes of raw data from their exosome characterization machines and turns them into statistical reports and quality control predictions, replacing their current manual Excel-based workflow. We have 156 sample files for development, but the production system will handle much larger datasets at scale."
 
 ---
 

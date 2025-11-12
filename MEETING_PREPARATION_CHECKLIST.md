@@ -358,7 +358,7 @@
 
 ---
 
-### SECTION 4: Domain-Specific Clarifications
+### 4. Statistical Requirements
 
 #### 🔬 **Scientific Requirements**
 
@@ -448,7 +448,7 @@
 
 ---
 
-### SECTION 6: Client Interaction
+### 6. Machine Learning & Predictions
 
 #### 👥 **Stakeholder Management**
 
