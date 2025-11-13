@@ -9,26 +9,37 @@
 
 ## 📊 Project Status Overview
 
-| Phase | Tasks Total | Completed | In Progress | Not Started | Progress |
-|-------|-------------|-----------|-------------|-------------|----------|
-| Phase 1: Data Processing | 3 | 0 | 1 | 2 | 🟡 10% |
-| Phase 2: Analysis & Viz | 3 | 0 | 0 | 3 | ⚪ 0% |
-| Phase 3: ML & Analytics | 2 | 0 | 0 | 2 | ⚪ 0% |
-| Phase 4: Deployment | 3 | 0 | 1 | 2 | 🟡 10% |
-| **TOTAL** | **11** | **0** | **2** | **9** | **5%** |
+| Phase | Tasks Total | Completed | In Progress | Not Started | Deferred | Progress |
+|-------|-------------|-----------|-------------|-------------|----------|----------|
+| Phase 1: Data Processing | 5 | 0 | 1 | 2 | 2 | 🟡 10% |
+| Phase 2: Analysis & Viz | 3 | 0 | 0 | 3 | 0 | ⚪ 0% |
+| Phase 3: ML & Analytics | 2 | 0 | 0 | 2 | 0 | ⚪ 0% |
+| Phase 4: Deployment | 3 | 0 | 1 | 2 | 0 | 🟡 10% |
+| **TOTAL** | **13** | **0** | **2** | **9** | **2** | **5%** |
+
+**📅 DEADLINE:** Mid-January 2025 for Phase 1 (nanoFACS + NTA only)  
+**⏸️ DEFERRED:** Tasks 1.4 & 1.5 (TEM) - Post January 2025
 
 ---
 
 ## 🎯 Current Sprint Focus
 
 **Sprint:** Initial Setup & Planning  
-**Duration:** Nov 12 - Nov 19, 2025  
+**Duration:** Nov 13 - Nov 19, 2025  
+**🚨 PROJECT DEADLINE:** Mid-January 2025 (10-12 weeks from now)  
 **Goals:**
 - ✅ Complete project analysis document
 - ✅ Set up GitHub repository
 - ✅ Create task tracking system
-- ⏳ Review meeting transcript (pending)
+- ✅ Analyze CRMIT architecture and align approach
+- ✅ **SCOPE CONFIRMED:** Deliver nanoFACS + NTA only (TEM & Western Blot deferred)
 - 🎯 Start Task 1.1 (FCS Parser Enhancement)
+
+**📋 Phase 1 Deliverables (By Mid-January 2025):**
+- ✅ Task 1.1: Enhanced FCS Parser (nanoFACS data)
+- ✅ Task 1.2: NTA Parser (ZetaView text files)
+- ✅ Task 1.3: Data Integration (unified dataset)
+- ⏸️ Task 1.4 & 1.5: TEM Module - DEFERRED to post-January
 
 ---
 
@@ -68,62 +79,119 @@ Initial project setup including repository creation and documentation.
 ---
 
 #### 🟡 Task 1.1: Enhanced FCS Data Parser
-**Status:** 🟡 IN PROGRESS  
-**Priority:** HIGH  
+**Status:** 🟡 IN PROGRESS (Planning - Fully Scoped)  
+**Priority:** ⚠️ CRITICAL (Upgraded from HIGH)  
 **Assigned:** TBD  
 **Start Date:** TBD  
-**Target Completion:** TBD
+**Target Completion:** 4-5 weeks from start
 
 **Description:**  
-Enhance existing FCS parser to handle batch processing of all flow cytometry files.
+Enhance existing FCS parser to handle batch processing with Parquet output, memory management, and unified data format integration.
 
 **Current Status:**
 - ✅ Basic parser exists: `Take path and meta convert to csv.py`
+- ✅ **UPDATED:** Requirements expanded for Parquet, memory management, unified format
+- ✅ **ANALYZED:** Each FCS file = 339K events × 26 params = 8.8M data points
 - ⏳ Needs batch processing capability
-- ⏳ Needs error handling
-- ⏳ Needs metadata standardization
+- ⏳ Needs error handling and quality validation
+- ⏳ Needs unified data model integration
 
 **Tasks Breakdown:**
-- [ ] Review existing parser code
-- [ ] Add recursive directory scanning
-- [ ] Implement batch processing with progress tracking
-- [ ] Add parallel processing support
-- [ ] Implement error handling and logging
-- [ ] Standardize metadata extraction
-- [ ] Add filename parsing for experimental conditions
-- [ ] Generate consolidated metadata database
-- [ ] Create processing status logs
-- [ ] Optimize for large files (50MB+)
-- [ ] Add unit tests
-- [ ] Document code with docstrings
+- [ ] **Setup & Installation:**
+  - [ ] Install Parquet support: `pip install pyarrow`
+  - [ ] Install parallel processing: `pip install dask`
+  - [ ] Install memory profiling: `pip install memory_profiler`
+  - [ ] Test Parquet conversion with test.csv
+- [ ] **Core Parser Enhancement:**
+  - [ ] Review existing parser code
+  - [ ] Implement chunked reading (50K events per chunk)
+  - [ ] Add recursive directory scanning
+  - [ ] Implement batch processing with progress tracking (tqdm)
+  - [ ] Add parallel processing support (joblib/dask)
+  - [ ] **NEW:** Implement memory-efficient processing (streaming)
+  - [ ] **NEW:** Add explicit garbage collection
+- [ ] **Unified Data Model Integration:**
+  - [ ] **NEW:** Generate unique sample_id from filename/metadata
+  - [ ] **NEW:** Extract standardized metadata (passage, fraction, antibody, etc.)
+  - [ ] **NEW:** Link to unified sample registry
+  - [ ] Implement filename parsing for experimental conditions
+- [ ] **Output Generation:**
+  - [ ] **CHANGED:** Save events as Parquet (was CSV)
+  - [ ] **NEW:** Save with Snappy compression
+  - [ ] **NEW:** Pre-calculate event statistics (mean, median, std for all 26 params)
+  - [ ] **NEW:** Calculate gating statistics (debris %, EV gate %, marker+)
+  - [ ] Generate consolidated metadata
+  - [ ] Create processing status logs with memory usage
+- [ ] **Data Quality & Validation:**
+  - [ ] **NEW:** Validate event count (>1000 events minimum)
+  - [ ] **NEW:** Validate parameter completeness (all 26 present)
+  - [ ] **NEW:** Check for data corruption
+  - [ ] **NEW:** Generate quality report per file
+  - [ ] Implement error handling and logging
+- [ ] **Testing & Documentation:**
+  - [ ] Add unit tests
+  - [ ] Benchmark performance (files/second, memory usage)
+  - [ ] Document code with docstrings
+  - [ ] Create usage guide
 
 **Input Files:**
 - `nanoFACS/10000 exo and cd81/*.fcs` (21 files)
 - `nanoFACS/CD9 and exosome lots/*.fcs` (24 files)
 - `nanoFACS/EXP 6-10-2025/*.fcs` (25 files)
-- **Total:** 70 FCS files
+- **Total:** 70 FCS files (~339K events each = 23.7M total events)
 
 **Expected Deliverables:**
-- [ ] `scripts/batch_fcs_parser.py` - Enhanced parsing script
-- [ ] `processed_data/fcs/metadata/*.csv` - Individual metadata files
-- [ ] `processed_data/fcs/events/*.parquet` - Event data (compressed)
-- [ ] `processed_data/fcs/fcs_metadata_consolidated.csv` - Master metadata
-- [ ] `logs/fcs_processing_log.csv` - Processing status log
+- [ ] `scripts/batch_fcs_parser.py` - Enhanced parsing script with Parquet output
+- [ ] **CHANGED:** `processed_data/measurements/nanofacs/events/*.parquet` - Event data (was CSV)
+- [ ] **NEW:** `processed_data/measurements/nanofacs/statistics/event_statistics.parquet` - Pre-calculated stats
+- [ ] **NEW:** `processed_data/measurements/nanofacs/statistics/quality_report.parquet` - Validation results
+- [ ] **NEW:** `processed_data/samples/sample_metadata.parquet` - Master sample registry (partial)
+- [ ] `logs/fcs_processing_log.csv` - Processing status with memory metrics
 - [ ] `tests/test_fcs_parser.py` - Unit tests
 - [ ] `docs/FCS_PARSER_GUIDE.md` - Usage documentation
 
+**Output Format Specification:**
+```
+processed_data/
+├── samples/
+│   └── sample_metadata.parquet          # Master registry (sample_id, name, metadata)
+├── measurements/
+│   └── nanofacs/
+│       ├── events/
+│       │   ├── S001.parquet             # 339K rows, ~12 MB (was 55 MB CSV)
+│       │   ├── S002.parquet
+│       │   └── ... (70 files)
+│       └── statistics/
+│           ├── event_statistics.parquet  # 70 rows × 300 columns (summary stats)
+│           └── quality_report.parquet    # Validation results
+└── logs/
+    ├── fcs_processing_log.csv
+    └── memory_usage.csv
+```
+
 **Dependencies:**
-- Python packages: pandas, numpy, fcsparser, tqdm, joblib
+- Python packages: **pandas, numpy, fcsparser, tqdm, joblib, pyarrow, memory_profiler**
 - Existing: `Take path and meta convert to csv.py`
+- **NEW:** UNIFIED_DATA_FORMAT_STRATEGY.md (schema reference)
+- **NEW:** DATA_FORMATS_FOR_ML_GUIDE.md (Parquet best practices)
+- **NEW:** TASK_UPDATES_DATA_STRUCTURE.md (memory management guide)
+
+**Performance Requirements:**
+- ✅ Process 70 files in <15 minutes (>5 files/minute)
+- ✅ Memory usage <4 GB during entire batch
+- ✅ Parquet files 70-80% smaller than CSV
+- ✅ All files pass quality validation or are flagged
 
 **Blockers:**
 - ⏳ Awaiting meeting transcript for specific requirements
-- ⏳ Need to confirm metadata fields of interest
+- ⏳ Need to confirm production data volumes
 
 **Notes:**
-- Current parser successfully processes single files
-- Need to handle corrupted or incomplete FCS files gracefully
+- **CRITICAL:** Each file has 339K events - cannot load all in memory at once
+- **UPDATED:** Use Parquet for 12-20x compression vs JSON, 80% vs CSV
+- **UPDATED:** Pre-calculate statistics to avoid loading raw events for every analysis
 - Consider memory management for large batch processing
+- Must integrate with unified data model (sample_id as primary key)
 
 ---
 
@@ -132,43 +200,95 @@ Enhance existing FCS parser to handle batch processing of all flow cytometry fil
 **Priority:** HIGH  
 **Assigned:** TBD  
 **Start Date:** TBD  
-**Target Completion:** TBD
+**Target Completion:** 2-3 weeks from start
+**Depends On:** Understanding of unified data format
 
 **Description:**  
-Develop parser for ZetaView NTA output files to extract size distribution and particle concentration data.
+Develop parser for ZetaView NTA output files with Parquet output and unified data model integration.
 
 **Tasks Breakdown:**
-- [ ] Analyze NTA file format structure
-- [ ] Identify key metadata fields
-- [ ] Create parser for single-position files
-- [ ] Create parser for 11-position files
-- [ ] Implement size distribution extraction
-- [ ] Calculate concentration metrics
-- [ ] Handle replicate measurements
-- [ ] Calculate position-averaged statistics
-- [ ] Implement error handling
-- [ ] Add unit tests
-- [ ] Document code
+- [ ] **Setup & Analysis:**
+  - [ ] Analyze NTA file format structure
+  - [ ] Identify key metadata fields
+  - [ ] Test Parquet conversion with sample NTA data
+- [ ] **Core Parser Development:**
+  - [ ] Create parser for single-position files
+  - [ ] Create parser for 11-position files
+  - [ ] Implement size distribution extraction
+  - [ ] Calculate concentration metrics (D10, D50, D90, mean, mode)
+  - [ ] Handle replicate measurements (R1, R2, etc.)
+  - [ ] Calculate position-averaged statistics
+  - [ ] Handle "-1" failed measurement values
+- [ ] **Unified Data Model Integration:**
+  - [ ] **NEW:** Generate unique sample_id from filename
+  - [ ] **NEW:** Parse passage/fraction from filename (e.g., P1, F8)
+  - [ ] **NEW:** Link to unified sample registry
+  - [ ] **NEW:** Standardize metadata schema
+- [ ] **Output Generation:**
+  - [ ] **CHANGED:** Save distributions as Parquet (was CSV)
+  - [ ] **CHANGED:** Save statistics as Parquet (was CSV)
+  - [ ] **NEW:** Calculate 11-position uniformity metrics
+  - [ ] **NEW:** Generate quality scores
+- [ ] **Testing & Documentation:**
+  - [ ] Implement error handling
+  - [ ] Add unit tests
+  - [ ] Document code
 
 **Input Files:**
 - `NTA/EV_IPSC_P1_19_2_25_NTA/*.txt` (27 files)
 - `NTA/EV_IPSC_P2_27_2_25_NTA/*.txt` (28 files)
 - `NTA/EV_IPSC_P2.1_28_2_25_NTA/*.txt` (31 files)
-- **Total:** 86 TXT files
+- **Total:** 86 TXT files (~10-50 KB each)
 
 **Expected Deliverables:**
 - [ ] `scripts/nta_parser.py` - NTA parsing script
-- [ ] `processed_data/nta/size_distributions.csv` - Size data
-- [ ] `processed_data/nta/concentrations.csv` - Concentration data
-- [ ] `processed_data/nta/metadata.csv` - Experimental metadata
-- [ ] `processed_data/nta/11pos_averages.csv` - Position-averaged data
+- [ ] **CHANGED:** `processed_data/measurements/nta/distributions/*.parquet` - Size distribution curves
+- [ ] **CHANGED:** `processed_data/measurements/nta/summary/nta_statistics.parquet` - All summary stats
+- [ ] **NEW:** `processed_data/samples/sample_metadata.parquet` - Master registry (append NTA samples)
 - [ ] `logs/nta_processing_log.csv` - Processing log
 - [ ] `tests/test_nta_parser.py` - Unit tests
 - [ ] `docs/NTA_PARSER_GUIDE.md` - Documentation
 
+**Output Format Specification:**
+```
+processed_data/
+├── samples/
+│   └── sample_metadata.parquet          # Master registry (updated with NTA samples)
+├── measurements/
+│   └── nta/
+│       ├── distributions/
+│       │   ├── S001.parquet             # Size distribution curves
+│       │   ├── S002.parquet
+│       │   └── ... (86 files)
+│       └── summary/
+│           └── nta_statistics.parquet    # 86 rows × 50 columns (summary metrics)
+└── logs/
+    └── nta_processing_log.csv
+```
+
+**Key Metrics to Extract:**
+```python
+# Size measurements
+- D10_nm, D50_nm, D90_nm (percentiles)
+- mean_size_nm, mode_size_nm, std_size_nm
+
+# Concentration
+- concentration_particles_ml
+- concentration_std, cv_concentration
+
+# 11-position uniformity
+- position_count, position_cv
+- uniformity_score (%)
+
+# Quality
+- temperature_C, pH, conductivity
+- qc_status, qc_flags
+```
+
 **Dependencies:**
-- Python packages: pandas, numpy, scipy
+- Python packages: **pandas, numpy, scipy, pyarrow**
 - Sample NTA files for testing
+- **NEW:** UNIFIED_DATA_FORMAT_STRATEGY.md (schema reference)
 
 **Blockers:**
 - None currently
@@ -178,25 +298,156 @@ Develop parser for ZetaView NTA output files to extract size distribution and pa
 - Need to handle "prof" (profile) vs "size" files differently
 - Some files show "-1" values indicating failed measurements
 - Replicate files marked with R1, R2, etc.
+- **UPDATED:** Use Parquet for consistency with nanoFACS data
 
 ---
 
 #### ⚪ Task 1.3: Data Integration & Standardization
 **Status:** ⚪ NOT STARTED  
-**Priority:** MEDIUM  
+**Priority:** ⚠️ HIGH (Upgraded from MEDIUM)  
 **Assigned:** TBD  
 **Start Date:** TBD  
-**Target Completion:** TBD  
+**Target Completion:** 1-2 weeks from start  
 **Depends On:** Task 1.1, Task 1.2
 
 **Description:**  
-Create unified data schema combining FCS and NTA data for integrated analysis.
+Create unified data schema combining nanoFACS and NTA data using three-layer architecture for integrated ML/analysis.
+
+**UPDATED SCOPE:**
+This task is now **CRITICAL** for enabling ML training and cross-machine analysis. Creates the integrated dataset that combines both machines' measurements.
 
 **Tasks Breakdown:**
-- [ ] Design database schema or dataframe structure
-- [ ] Map samples across different assays
-- [ ] Create sample matching algorithm (passage + fraction)
-- [ ] Handle missing data
+- [ ] **Layer 1: Master Sample Registry**
+  - [ ] **NEW:** Merge sample_metadata from Task 1.1 and 1.2
+  - [ ] **NEW:** Reconcile sample_id across both machines
+  - [ ] **NEW:** Handle samples with only one machine's data
+  - [ ] **NEW:** Add quality flags and control indicators
+  - [ ] Create comprehensive sample manifest
+- [ ] **Layer 2: Machine-Specific Validation**
+  - [ ] Validate nanoFACS statistics schema
+  - [ ] Validate NTA statistics schema
+  - [ ] Cross-check sample_id linkages
+  - [ ] Identify orphaned samples (no matching sample)
+- [ ] **Layer 3: Integrated ML Dataset Creation**
+  - [ ] **NEW:** Merge nanoFACS and NTA statistics by sample_id
+  - [ ] **NEW:** Rename columns with prefixes (facs_, nta_)
+  - [ ] **NEW:** Calculate cross-machine correlations
+  - [ ] **NEW:** Compute derived features (purity_score, size_correlation)
+  - [ ] **NEW:** Add quality labels for ML training
+  - [ ] **NEW:** Create train/validation/test splits
+- [ ] **Data Quality & Completeness:**
+  - [ ] Handle missing data (samples with only one machine)
+  - [ ] Validate data types and ranges
+  - [ ] Generate data quality report
+  - [ ] Create data dictionary documenting all fields
+- [ ] **Output Generation:**
+  - [ ] Generate combined_features.parquet (ML-ready)
+  - [ ] Generate correlation_analysis.parquet
+  - [ ] Create sample inventory report
+- [ ] **Documentation:**
+  - [ ] Document schema design decisions
+  - [ ] Create data flow diagram
+  - [ ] Write integration guide
+
+**Input Data:**
+- From Task 1.1: `processed_data/measurements/nanofacs/statistics/event_statistics.parquet`
+- From Task 1.2: `processed_data/measurements/nta/summary/nta_statistics.parquet`
+- From Task 1.1: `processed_data/samples/sample_metadata.parquet` (partial)
+- From Task 1.2: `processed_data/samples/sample_metadata.parquet` (appended)
+
+**Expected Deliverables:**
+- [ ] **NEW:** `unified_data/samples/sample_metadata.parquet` - Complete master registry
+- [ ] **NEW:** `unified_data/integrated/combined_features.parquet` - ML-ready dataset (BOTH machines)
+- [ ] **NEW:** `unified_data/integrated/quality_labels.parquet` - ML labels
+- [ ] **NEW:** `unified_data/integrated/correlation_analysis.parquet` - Cross-machine correlations
+- [ ] **NEW:** `scripts/create_integrated_dataset.py` - Integration script
+- [ ] `docs/DATA_SCHEMA.md` - Complete schema documentation
+- [ ] `docs/DATA_DICTIONARY.md` - Field definitions
+- [ ] `reports/data_quality_report.html` - Quality assessment
+- [ ] `reports/sample_inventory.csv` - Sample completeness tracking
+
+**Output Schema (combined_features.parquet):**
+```python
+Columns (~350 total):
+# Sample identification (from sample_metadata)
+- sample_id, sample_name, passage, fraction, antibody, antibody_conc_ug, 
+  purification_method, dilution_factor, experiment_date
+
+# nanoFACS features (~300 columns with 'facs_' prefix)
+- facs_mean_FSC, facs_median_FSC, facs_std_FSC, ...
+- facs_mean_SSC, facs_median_SSC, ...
+- facs_mean_V447, facs_mean_B531, ... (all 26 parameters)
+- facs_pct_marker_positive, facs_pct_ev_gate, facs_pct_debris
+
+# NTA features (~50 columns with 'nta_' prefix)
+- nta_D10_nm, nta_D50_nm, nta_D90_nm
+- nta_mean_size, nta_mode_size, nta_std_size
+- nta_concentration, nta_cv_concentration
+- nta_uniformity_score, nta_position_cv
+
+# Derived features (cross-machine)
+- size_correlation (FSC vs D50)
+- purity_score (combined metric)
+
+# ML labels
+- quality_label ('Good', 'Bad', 'Marginal')
+- quality_score (0.0-1.0)
+- is_outlier (True/False)
+```
+
+**Integration Algorithm:**
+```python
+# Pseudo-code for integration
+metadata = pd.read_parquet('samples/sample_metadata.parquet')
+nanofacs = pd.read_parquet('measurements/nanofacs/statistics/event_statistics.parquet')
+nta = pd.read_parquet('measurements/nta/summary/nta_statistics.parquet')
+
+# Merge on sample_id
+combined = metadata.merge(nanofacs, on='sample_id', how='left')
+combined = combined.merge(nta, on='sample_id', how='left')
+
+# Rename columns
+combined = combined.rename(columns={
+    'mean_FSC_H': 'facs_mean_FSC',
+    'D50_nm': 'nta_D50_nm',
+    # ... all columns
+})
+
+# Calculate derived features
+combined['size_correlation'] = calculate_correlation(
+    combined['facs_mean_FSC'], 
+    combined['nta_D50_nm']
+)
+
+# Add quality labels
+combined['quality_label'] = assign_quality_labels(combined)
+
+# Save
+combined.to_parquet('unified_data/integrated/combined_features.parquet')
+```
+
+**Dependencies:**
+- Task 1.1 completion (nanoFACS statistics)
+- Task 1.2 completion (NTA statistics)
+- Python packages: **pandas, numpy, pyarrow, scikit-learn**
+- **NEW:** UNIFIED_DATA_FORMAT_STRATEGY.md (architecture guide)
+
+**Success Criteria:**
+- ✅ All samples from both machines linked by sample_id
+- ✅ Combined dataset has ~70 rows (samples) × 350 columns (features)
+- ✅ No data integrity issues (types, ranges validated)
+- ✅ Missing data handled appropriately (flagged, not dropped)
+- ✅ ML-ready: Can load and train sklearn model directly
+
+**Blockers:**
+- Depends on Task 1.1 and 1.2 completion
+
+**Notes:**
+- **CRITICAL:** This creates the "single source of truth" for ML training
+- **UPDATED:** Three-layer architecture ensures flexibility + integration
+- Must handle samples that only have one machine's data (not discard!)
+- sample_id is the PRIMARY KEY linking everything
+- This dataset is what feeds into ALL downstream tasks (Task 2.x, 3.x)
 - [ ] Create sample manifest
 - [ ] Implement data validation checks
 - [ ] Generate data quality report
@@ -225,6 +476,200 @@ Create unified data schema combining FCS and NTA data for integrated analysis.
 - Need to establish naming convention for sample IDs
 - Consider using passage + fraction as linking key
 - May need fuzzy matching for sample names
+
+---
+
+#### ⏸️ Task 1.4: TEM Image Analysis Module (DEFERRED - Post January 2025)
+**Status:** ⏸️ DEFERRED  
+**Priority:** ⚠️ HIGH (CRMIT Architecture Requirement - BUT NO SAMPLE DATA YET)  
+**Assigned:** TBD  
+**Start Date:** Post mid-January 2025  
+**Target Completion:** 3-4 weeks from start  
+**Depends On:** TEM sample data availability
+
+**⚠️ CLIENT DECISION (Nov 13, 2025):**
+- **NO TEM SAMPLE DATA AVAILABLE** - Cannot implement without test images
+- **DEFERRED** to post-January 2025 implementation
+- **FOCUS:** Deliver nanoFACS + NTA by mid-January first
+- **STATUS:** Design documented, ready to implement when TEM data arrives
+
+**Description:**  
+Implement computer vision module for electron microscope (TEM) image analysis. Extract scale bars, measure particle sizes, and filter background noise.
+
+**CONTEXT:**
+- **Source:** CRMIT Architecture Document (Computer Vision Module)
+- **Status:** MISSING from current scope - identified in architecture analysis
+- **Decision Needed:** Phase 1B (immediate) or Phase 2 (after nanoFACS+NTA)?
+
+**Tasks Breakdown:**
+- [ ] **Setup & Research:**
+  - [ ] Install OpenCV: `pip install opencv-python`
+  - [ ] Install scikit-image: `pip install scikit-image`
+  - [ ] Research scale bar detection methods (template matching, OCR)
+  - [ ] Research particle segmentation algorithms (watershed, contours)
+- [ ] **Scale Bar Detection:**
+  - [ ] Implement template matching for common scale bar patterns
+  - [ ] OCR-based scale bar text extraction (pytesseract)
+  - [ ] Pixel-to-nanometer calibration calculation
+  - [ ] Validate calibration accuracy
+- [ ] **Particle Segmentation:**
+  - [ ] Implement background subtraction/noise filtering
+  - [ ] Watershed algorithm for particle separation
+  - [ ] Contour detection and validation
+  - [ ] Filter out artifacts and non-viable particles
+- [ ] **Size Measurement:**
+  - [ ] Calculate particle diameters using calibrated pixels
+  - [ ] Extract morphology features (circularity, aspect ratio)
+  - [ ] Generate size distribution histograms
+  - [ ] Calculate D10/D50/D90 from TEM measurements
+- [ ] **Quality Control:**
+  - [ ] Validate particle count accuracy
+  - [ ] Compare TEM vs NTA size distributions (cross-validation)
+  - [ ] Flag low-quality images (poor focus, incorrect scale)
+  - [ ] Generate quality report per image
+- [ ] **Output Generation:**
+  - [ ] Save annotated images (particles highlighted)
+  - [ ] Generate TEM statistics (mean size, count, morphology)
+  - [ ] Create tem_statistics.parquet
+- [ ] **Testing & Documentation:**
+  - [ ] Test on sample TEM images
+  - [ ] Benchmark accuracy vs manual measurements
+  - [ ] Document algorithm choices and parameters
+
+**Input Files:**
+- TEM image files (format TBD - likely .tif or .png)
+- Expected location: `raw_data/TEM/` (not yet available)
+
+**Expected Deliverables:**
+- [ ] `scripts/tem_image_parser.py` - Computer vision processing
+- [ ] `processed_data/measurements/tem/annotated_images/*.png` - Annotated images
+- [ ] `processed_data/measurements/tem/statistics/tem_statistics.parquet` - Size/morphology data
+- [ ] `logs/tem_processing_log.csv` - Processing status
+- [ ] `tests/test_tem_parser.py` - Unit tests
+- [ ] `docs/TEM_PARSER_GUIDE.md` - Usage documentation
+
+**Output Schema (tem_statistics.parquet):**
+```python
+Columns (~20):
+- sample_id (link to sample_metadata)
+- sample_name
+- image_filename
+- particles_detected (count)
+- mean_diameter_nm
+- median_diameter_nm
+- std_diameter_nm
+- D10_nm, D50_nm, D90_nm (percentiles)
+- mean_circularity (0-1, 1=perfect circle)
+- mean_aspect_ratio
+- scale_bar_value_nm (calibration)
+- scale_bar_pixels
+- image_quality_score (0-1)
+- processing_timestamp
+- notes (any issues flagged)
+```
+
+**Dependencies:**
+- Python packages: opencv-python, scikit-image, pytesseract (optional)
+- TEM image samples (need to request from client)
+- Reference to CRMIT_ARCHITECTURE_ANALYSIS.md (Computer Vision Module section)
+
+**Success Criteria:**
+- ✅ Scale bar detected in >90% of images
+- ✅ Particle segmentation accuracy >85% vs manual count
+- ✅ Size measurements within ±5% of NTA D50 (validation)
+- ✅ Processing speed >10 images/minute
+
+**Blockers:**
+- ⚠️ **CRITICAL:** TEM image samples not yet available
+- ⚠️ **DECISION:** Add to Phase 1B or defer to Phase 2?
+
+**Notes:**
+- **CRMIT Expectation:** TEM is core component for cross-validation with NTA
+- **Impact:** Delays timeline by 3-4 weeks if added to Phase 1
+- **Alternative:** Complete nanoFACS+NTA first (Phase 1), add TEM in Phase 2
+- **Action:** Discuss in meeting - "Is TEM data available now?"
+
+---
+
+#### ⏸️ Task 1.5: TEM Data Integration (DEFERRED - Post January 2025)
+**Status:** ⏸️ DEFERRED  
+**Priority:** MEDIUM  
+**Assigned:** TBD  
+**Start Date:** Post mid-January 2025  
+**Target Completion:** 1-2 weeks from start  
+**Depends On:** Task 1.4
+
+**⚠️ CLIENT DECISION (Nov 13, 2025):**
+- **DEFERRED** until TEM module (Task 1.4) is implemented
+- **NO ACTION NEEDED** before mid-January 2025 deadline
+
+**Description:**  
+Integrate TEM measurements into unified data model and combined ML dataset.
+
+**Tasks Breakdown:**
+- [ ] **Sample Matching:**
+  - [ ] Parse TEM image filenames to extract sample identifiers
+  - [ ] Match TEM samples to existing sample_metadata by sample_id
+  - [ ] Handle TEM-only samples (no nanoFACS/NTA data)
+- [ ] **Metadata Integration:**
+  - [ ] Append TEM samples to sample_metadata.parquet
+  - [ ] Link TEM images to experimental conditions
+- [ ] **Feature Integration:**
+  - [ ] Merge tem_statistics into combined_features.parquet
+  - [ ] Add 'tem_' prefix to all TEM columns
+  - [ ] Calculate cross-validation metrics (TEM D50 vs NTA D50)
+  - [ ] Add correlation features (tem_nta_size_correlation)
+- [ ] **Quality Validation:**
+  - [ ] Cross-validate TEM vs NTA size distributions
+  - [ ] Flag significant discrepancies (>20% difference)
+  - [ ] Generate cross-validation report
+- [ ] **Documentation:**
+  - [ ] Update DATA_SCHEMA.md with TEM columns
+  - [ ] Document TEM integration workflow
+
+**Expected Deliverables:**
+- [ ] Updated `unified_data/samples/sample_metadata.parquet` (+ TEM samples)
+- [ ] Updated `unified_data/integrated/combined_features.parquet` (+ ~20 TEM columns)
+- [ ] `unified_data/integrated/tem_nta_validation.parquet` - Cross-validation results
+- [ ] `scripts/integrate_tem_data.py` - Integration script
+- [ ] Updated `docs/DATA_SCHEMA.md`
+
+**Updated Schema (combined_features.parquet with TEM):**
+```python
+Total columns: ~370 (was 350)
+# ... existing nanoFACS and NTA features ...
+
+# TEM features (20 new columns with 'tem_' prefix)
+- tem_particles_detected
+- tem_mean_diameter_nm
+- tem_D10_nm, tem_D50_nm, tem_D90_nm
+- tem_mean_circularity
+- tem_mean_aspect_ratio
+- tem_image_quality_score
+
+# Cross-validation features (derived)
+- tem_nta_size_correlation (corr between tem_D50 and nta_D50)
+- tem_nta_size_difference_pct
+- size_validation_status ('match', 'mismatch', 'tem_only', 'nta_only')
+```
+
+**Dependencies:**
+- Task 1.4 completion (TEM parser)
+- Task 1.3 completion (existing integration)
+
+**Success Criteria:**
+- ✅ All TEM samples linked by sample_id
+- ✅ TEM features merged into combined_features.parquet
+- ✅ Cross-validation shows <20% size difference for 80% of samples
+- ✅ ML models can use TEM features for training
+
+**Blockers:**
+- Depends on Task 1.4 completion
+
+**Notes:**
+- **CRMIT Architecture:** Multi-modal fusion with TEM morphology features
+- Enables ML models to learn from TEM visual data alongside flow cytometry
+- Critical for "NTA vs TEM cross-validation" mentioned in CRMIT doc
 
 ---
 
@@ -746,6 +1191,66 @@ Create comprehensive documentation and training materials.
 - 🟡 Started Task 1.1 (FCS Parser - planning phase with critical updates)
 - 🟡 Started Task 4.1 (Pipeline - in planning)
 - ⏳ **BLOCKER:** Need production data volume clarification from tech lead
+
+### 2025-11-13:
+- ✅ **CRITICAL UPDATE #3:** Created DATA_FORMATS_FOR_ML_GUIDE.md
+  - Analyzed JSON vs CSV vs Parquet vs HDF5 for ML
+  - Decision: Use Parquet (12-20x smaller than JSON, 10x faster)
+  - Documented ML integration examples for all major frameworks
+  - Added memory management best practices
+- ✅ **CRITICAL UPDATE #4:** Created UNIFIED_DATA_FORMAT_STRATEGY.md
+  - Defined unified data model for multi-machine integration
+  - Created three-layer architecture: Registry → Machine-Specific → Integrated
+  - Designed schemas for sample_metadata, nanoFACS stats, NTA stats, combined features
+  - **KEY DECISION:** Standardize on unified format linked by sample_id
+- ✅ **Updated Task Requirements:**
+  - Task 1.1: Output format changed from CSV to Parquet
+  - Task 1.2: Output format changed from CSV to Parquet
+  - Task 1.3: Enhanced scope - create unified registry and integrated ML dataset
+  - All tasks: Added unified data model integration requirements
+- ✅ Updated all documentation with format decisions
+- 🎯 **READY:** Task 1.1 fully scoped with Parquet, unified format, memory management
+- ✅ **CRITICAL UPDATE #5:** Analyzed CRMIT's original architecture document
+  - Created CRMIT_ARCHITECTURE_ANALYSIS.md (118 pages comprehensive comparison)
+  - **Finding:** 80% alignment with CRMIT design - technology stack matches perfectly
+  - **CRITICAL GAP:** TEM (Electron Microscope) integration MISSING from our scope
+  - **HIGH PRIORITY:** Identified 4 missing features (size binning, auto-axis selection, alerts, population shifts)
+  - **Recommendation:** Add Phase 1B for TEM module (4-6 weeks) OR defer to Phase 2
+- ✅ **CRITICAL UPDATE #6:** Created MEETING_PRESENTATION_MASTER_DOC.md
+  - Complete presentation guide for stakeholder meetings (93 pages, 27K words)
+  - 30 commonly asked Q&A with detailed technical answers
+  - Meeting preparation checklist and talking points
+  - Technology stack justification and alternative comparisons
+- ✅ **Architecture Alignment Verified:**
+  - ✅ FCS Parser: fcsparser library (MATCHES CRMIT)
+  - ✅ NTA Parser: Custom ZetaView parser (MATCHES CRMIT)
+  - ✅ Data Fusion: sample_id linking (MATCHES CRMIT)
+  - ✅ ML Approach: Unsupervised + semi-supervised (MATCHES CRMIT)
+  - ✅ Tech Stack: Python, PostgreSQL, React, Plotly (MATCHES CRMIT)
+  - ❌ TEM Module: OpenCV computer vision (NOT YET SCOPED - NEEDS ADDITION)
+- 📋 **New Tasks Identified from CRMIT Architecture:**
+  - Task 1.4 (NEW): TEM Image Analysis Module - Computer vision for electron microscope images
+  - Task 1.5 (NEW): TEM Data Integration - Merge TEM features into unified dataset
+  - Task 1.2 Enhancement: Add size binning (40-80nm, 80-100nm, 100-120nm)
+  - Task 2.1 Enhancement: Add population shift detection (Kolmogorov-Smirnov test)
+  - Task 2.2 Enhancement: Add auto-axis selection for scatter plots
+  - Task 2.3 Enhancement: Add alert system with timestamps + Excel export
+  - Workflow Orchestration: Add Celery + Celery Beat (or Apache Airflow)
+- ⚠️ **DECISION NEEDED:** TEM Module Priority
+  - Option 1: Add to Phase 1B (extends timeline to 6-7 months)
+  - Option 2: Deliver nanoFACS+NTA in Phase 1, TEM in Phase 2
+  - **Action:** Discuss in next meeting - "Is TEM data available now?"
+- ✅ **CLIENT DECISION (Nov 13, 2025):** TEM & Western Blot DEFERRED
+  - **CONFIRMED:** No TEM or Western Blot sample data available yet
+  - **DEADLINE:** Deliver FCS (nanoFACS) + Text file (NTA) by mid-January 2025
+  - **SCOPE:** Phase 1 focus ONLY on Tasks 1.1, 1.2, 1.3 (nanoFACS + NTA)
+  - **Future:** TEM (Task 1.4) and Western Blot to be implemented after January
+  - **Timeline Revised:** 18-23 weeks → Now targeting ~10-12 weeks for Phase 1 delivery
+- 📊 **Revised Timeline Estimate:**
+  - Original (nanoFACS + NTA only): 18-23 weeks
+  - With TEM + enhancements: 23-30 weeks (5.5-7.5 months)
+  - CRMIT Original Estimate: 6-8 months ✅ STILL ALIGNED
+  - **NEW TARGET:** Mid-January 2025 for nanoFACS + NTA (10-12 weeks from Nov 13)
 
 ---
 
