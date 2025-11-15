@@ -95,9 +95,9 @@ class NTAPlotter:
             d90 = np.percentile(sizes, 90)
             
             # Add vertical lines for percentiles
-            ax.axvline(d10, color='red', linestyle='--', linewidth=2, label=f'D10: {d10:.1f} nm')
-            ax.axvline(d50, color='green', linestyle='--', linewidth=2, label=f'D50: {d50:.1f} nm')
-            ax.axvline(d90, color='orange', linestyle='--', linewidth=2, label=f'D90: {d90:.1f} nm')
+            ax.axvline(float(d10), color='red', linestyle='--', linewidth=2, label=f'D10: {d10:.1f} nm')
+            ax.axvline(float(d50), color='green', linestyle='--', linewidth=2, label=f'D50: {d50:.1f} nm')
+            ax.axvline(float(d90), color='orange', linestyle='--', linewidth=2, label=f'D90: {d90:.1f} nm')
             
             # Add text box with statistics
             stats_text = f'Mean: {mean_size:.1f} nm\nMedian: {median_size:.1f} nm\nN positions: {len(sizes)}'
@@ -119,7 +119,7 @@ class NTAPlotter:
         
         # Title
         if title is None:
-            sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else 'Unknown'
+            sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
             title = f'NTA Size Distribution: {sample_id}'
         ax.set_title(title, fontweight='bold')
         
@@ -155,7 +155,7 @@ class NTAPlotter:
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Extract size data
-        sizes = data['median_size_nm'].dropna().sort_values()
+        sizes = pd.Series(sorted(data['median_size_nm'].dropna()))
         
         # Calculate cumulative distribution
         cumulative = np.arange(1, len(sizes) + 1) / len(sizes) * 100
@@ -169,13 +169,13 @@ class NTAPlotter:
         d50 = np.percentile(sizes, 50)
         d90 = np.percentile(sizes, 90)
         
-        ax.axvline(d10, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'D10: {d10:.1f} nm')
+        ax.axvline(float(d10), color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'D10: {d10:.1f} nm')
         ax.axhline(10, color='red', linestyle='--', linewidth=1, alpha=0.5)
         
-        ax.axvline(d50, color='green', linestyle='--', linewidth=2, alpha=0.7, label=f'D50: {d50:.1f} nm')
+        ax.axvline(float(d50), color='green', linestyle='--', linewidth=2, alpha=0.7, label=f'D50: {d50:.1f} nm')
         ax.axhline(50, color='green', linestyle='--', linewidth=1, alpha=0.5)
         
-        ax.axvline(d90, color='orange', linestyle='--', linewidth=2, alpha=0.7, label=f'D90: {d90:.1f} nm')
+        ax.axvline(float(d90), color='orange', linestyle='--', linewidth=2, alpha=0.7, label=f'D90: {d90:.1f} nm')
         ax.axhline(90, color='orange', linestyle='--', linewidth=1, alpha=0.5)
         
         # Labels
@@ -184,7 +184,7 @@ class NTAPlotter:
         
         # Title
         if title is None:
-            sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else 'Unknown'
+            sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
             title = f'Cumulative Size Distribution: {sample_id}'
         ax.set_title(title, fontweight='bold')
         
@@ -245,7 +245,7 @@ class NTAPlotter:
         
         # Title
         if title is None:
-            sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else 'Unknown'
+            sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
             title = f'Concentration vs Size: {sample_id}'
         ax.set_title(title, fontweight='bold')
         
@@ -278,7 +278,7 @@ class NTAPlotter:
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
         
         # Get sample info
-        sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else 'Unknown'
+        sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
         
         # Plot 1: Size distribution histogram (top-left)
         sizes = data['median_size_nm'].dropna()
@@ -291,7 +291,7 @@ class NTAPlotter:
         axes[0, 0].grid(True, alpha=0.3)
         
         # Plot 2: Cumulative distribution (top-right)
-        sizes_sorted = sizes.sort_values()
+        sizes_sorted = pd.Series(sorted(sizes))
         cumulative = np.arange(1, len(sizes_sorted) + 1) / len(sizes_sorted) * 100
         axes[0, 1].plot(sizes_sorted, cumulative, color='steelblue', linewidth=2)
         axes[0, 1].fill_between(sizes_sorted, cumulative, alpha=0.3, color='steelblue')
@@ -366,31 +366,31 @@ def generate_nta_plots(parquet_file: Path, output_dir: Path = Path("figures/nta"
     plotter = NTAPlotter(output_dir=output_dir)
     
     # Get sample ID for filenames
-    sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else parquet_file.stem
+    sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else parquet_file.stem
     
     # Generate size distribution
     plotter.plot_size_distribution(
         data=data,
-        output_file=f"{sample_id}_size_distribution.png"
+        output_file=Path(f"{sample_id}_size_distribution.png")
     )
     
     # Generate cumulative distribution
     plotter.plot_cumulative_distribution(
         data=data,
-        output_file=f"{sample_id}_cumulative.png"
+        output_file=Path(f"{sample_id}_cumulative.png")
     )
     
     # Generate concentration profile
     if 'concentration_particles_ml' in data.columns:
         plotter.plot_concentration_profile(
             data=data,
-            output_file=f"{sample_id}_concentration.png"
+            output_file=Path(f"{sample_id}_concentration.png")
         )
     
     # Generate summary plot
     plotter.create_summary_plot(
         data=data,
-        output_file=f"{sample_id}_summary.png"
+        output_file=Path(f"{sample_id}_summary.png")
     )
     
     # Close all figures to free memory

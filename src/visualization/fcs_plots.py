@@ -241,7 +241,7 @@ class FCSPlotter:
         
         # Generate plots for each marker
         figures = []
-        sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else 'Unknown'
+        sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
         
         for marker in marker_channels:
             logger.info(f"Plotting {marker} vs {ssc_channel}")
@@ -281,7 +281,7 @@ class FCSPlotter:
         fig, axes = plt.subplots(2, 2, figsize=(12, 12))
         
         # Get sample info
-        sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else 'Unknown'
+        sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
         
         # Sample data for performance
         if len(data) > 10000:
@@ -360,12 +360,12 @@ def generate_fcs_plots(parquet_file: Path, output_dir: Path = Path("figures/fcs"
     plotter = FCSPlotter(output_dir=output_dir)
     
     # Get sample ID for filenames
-    sample_id = data.get('sample_id', ['Unknown']).iloc[0] if 'sample_id' in data.columns else parquet_file.stem
+    sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else parquet_file.stem
     
     # Generate FSC vs SSC plot
     plotter.plot_fsc_ssc(
         data=data,
-        output_file=f"{sample_id}_FSC_vs_SSC.png"
+        output_file=Path(f"{sample_id}_FSC_vs_SSC.png")
     )
     
     # Generate fluorescence marker plots
@@ -377,7 +377,7 @@ def generate_fcs_plots(parquet_file: Path, output_dir: Path = Path("figures/fcs"
     # Generate summary plot
     plotter.create_summary_plot(
         data=data,
-        output_file=f"{sample_id}_summary.png"
+        output_file=Path(f"{sample_id}_summary.png")
     )
     
     # Close all figures to free memory

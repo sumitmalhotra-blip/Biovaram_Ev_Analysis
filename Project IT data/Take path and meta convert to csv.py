@@ -71,7 +71,7 @@ def fcs_to_csv(fcs_file_path, metadata_output_file, data_output_file):
         cleaned_metadata = clean_metadata(metadata)
 
         # Convert the cleaned metadata dictionary into a DataFrame
-        metadata_df = pd.DataFrame(list(cleaned_metadata.items()), columns=['Metadata Key', 'Value'])
+        metadata_df = pd.DataFrame(list(cleaned_metadata.items()), columns=['Metadata Key', 'Value'])  # type: ignore[call-overload]
 
         # Clean the column names for the data to be CSV compatible
         sanitized_columns = sanitize_column_names(data.columns)
