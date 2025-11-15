@@ -29,12 +29,12 @@ class DataIntegrator:
     Integrates data from multiple sources and calculates baseline comparisons.
     """
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str | None = None):
         """Initialize data integrator."""
         self.config = self._load_config(config_path)
         logger.info("Data Integrator initialized")
     
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: str | None) -> Dict:
         """Load integration configuration."""
         # TODO: Implement
         return {}

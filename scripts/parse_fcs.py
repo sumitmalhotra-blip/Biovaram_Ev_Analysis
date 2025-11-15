@@ -32,7 +32,7 @@ class FCSParser:
     Enhanced FCS parser with baseline workflow support and S3 integration.
     """
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str | None = None):
         """
         Initialize FCS parser with configuration.
         
@@ -42,7 +42,7 @@ class FCSParser:
         self.config = self._load_config(config_path)
         logger.info("FCS Parser initialized")
     
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: str | None) -> Dict:
         """Load parser configuration from JSON file."""
         # TODO: Implement config loading
         return {}

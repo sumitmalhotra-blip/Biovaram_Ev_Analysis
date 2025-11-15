@@ -18,7 +18,7 @@ from botocore.exceptions import ClientError
 import pandas as pd
 from io import BytesIO
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 import logging
 import json
 
@@ -42,7 +42,7 @@ class S3Manager:
         self.s3_client = self._init_s3_client()
         logger.info("S3 Manager initialized")
     
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: str | None) -> Dict:
         """Load S3 configuration."""
         # TODO: Load from JSON file
         return {

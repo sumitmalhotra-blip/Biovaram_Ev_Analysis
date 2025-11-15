@@ -30,12 +30,12 @@ class NTAParser:
     Parser for ZetaView NTA text files.
     """
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str | None = None):
         """Initialize NTA parser."""
         self.config = self._load_config(config_path)
         logger.info("NTA Parser initialized")
     
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: str | None) -> Dict:
         """Load parser configuration."""
         # TODO: Implement
         return {}
