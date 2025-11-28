@@ -3,7 +3,99 @@
 **Project:** Extracellular Vesicle Analysis Platform  
 **Client:** Bio Varam via CRMIT  
 **Repository:** https://github.com/isumitmalhotra/CRMIT-Project-  
-**Last Updated:** November 18, 2025 @ 22:35
+**Last Updated:** November 28, 2025 @ 10:00
+
+---
+
+## 🎉 MEETING UPDATE - November 27, 2025 (Weekly Customer Connect)
+
+### ✅ UI + BACKEND INTEGRATION DEMO - SUCCESSFUL
+
+**Attendees:** Sumit, Parvesh, Surya, Jaganmohan Reddy, Abhishek, Charmi
+
+**Demo Highlights:**
+- ✅ Backend successfully connected with Mohit's UI
+- ✅ All analysis working smoothly and fast
+- ✅ New "Nanoparticle Tracking" tab added for NTA data
+- ✅ Graph pinning feature planned (pin to dashboard)
+
+**Key Decisions from Jaganmohan Reddy:**
+
+1. **User-Defined Size Ranges** (NEW REQUIREMENT):
+   - ❌ DO NOT hardcode size categories
+   - ✅ Let users choose their own ranges dynamically
+   - **Small vesicles**: 30-100 nm (one categorization)
+   - **Alternative**: 30-150 nm (another categorization)
+   - **Implementation**: Add UI controls for users to select start/end range
+   - **Reason**: Different scientific applications need different segmentation
+
+2. **Dashboard Cards Content**:
+   - Show particle counts within user-selected size ranges
+   - Example: "Particles in 30-100nm: X", "Particles in 100-150nm: Y"
+   - Allow multiple range segments
+
+3. **Anomaly Detection Vision** (Future AI Feature):
+   - System should proactively find anomalies across parameter combinations
+   - Alert users: "You're getting anomaly here - look into this"
+   - Not just manual parameter selection
+   - **Blocked**: Waiting for AI/Data Cloud credentials from MD meeting
+
+4. **Parameter Graphs List** (PENDING from Jaganmohan):
+   - Jaganmohan will provide specific list of graphs/parameters to check
+   - Which parameter combinations AI should analyze for anomalies
+   - **Timeline**: "Will sit down and write those points"
+
+**New Data Expected:**
+- BioVaram establishing new protocols
+- New experimental data expected in ~2 weeks
+- Surya has recent data but analyzing internally first
+
+**Meeting Schedule Changed:**
+- **OLD**: Thursdays 7:50 PM
+- **NEW**: Wednesdays 4:00-5:00 PM (recurring)
+
+**Blockers:**
+- ⏳ Waiting for AI/Data Cloud credentials (after MD meeting with Vinod)
+- ⏳ Waiting for parameter graphs list from Jaganmohan
+- ⏳ Waiting for new protocol data from BioVaram (~2 weeks)
+
+**Action Items:**
+- [x] ~~Implement user-selectable size range UI controls~~ ✅ **COMPLETED Nov 28, 2025**
+- [x] ~~Update dashboard cards to show counts per user-defined range~~ ✅ **COMPLETED Nov 28, 2025**
+- [ ] Continue backend optimization while waiting for AI access
+- [ ] Prepare for AI training once credentials received
+
+### ✅ USER-DEFINED SIZE RANGE SELECTOR - IMPLEMENTED (Nov 28, 2025)
+
+**Implementation Details:**
+- Added to: `apps/biovaram_streamlit/app.py`
+- Location: Sidebar under "Analysis Settings" → "Size Range Analysis"
+
+**Features Implemented:**
+1. **Dynamic Range Management:**
+   - Default ranges: Small EVs (30-100nm), Medium EVs (100-150nm), Large EVs (150-200nm)
+   - Add custom ranges with name, min, max inputs
+   - Delete existing ranges with 🗑️ button
+   
+2. **Quick Presets:**
+   - "30-100, 100-150" - Standard EV categorization
+   - "40-80, 80-120" - Exosome-focused ranges
+   
+3. **Visual Distribution Display:**
+   - Gradient-styled stat cards for each range
+   - Shows: count, range, percentage of total
+   - Bar chart visualization for multiple ranges
+   
+4. **Detailed Statistics:**
+   - Expandable section with full table
+   - Shows particles outside defined ranges
+   - Coverage info comparing defined vs actual data range
+
+**User Workflow:**
+1. Upload FCS file and run analysis
+2. In sidebar, customize size ranges (or use presets)
+3. After analysis, see particle distribution cards
+4. View bar chart and detailed statistics
 
 ---
 

@@ -2,11 +2,68 @@
 
 **Date:** November 18, 2025  
 **Meeting Date:** November 18, 2025 (Meeting Completed)  
+**Last Updated:** November 28, 2025 (Added Nov 27 meeting notes)  
 **Purpose:** Clarify data processing standards, normalization procedures, and cross-instrument sample linking  
 **Context:** Currently developing ML pipeline for integrated FCS + NTA analysis
 
 **Status:** ✅ MEETING COMPLETED - Answers recorded below  
 **Next Steps:** Send remaining unanswered questions to team for clarification
+
+---
+
+## 📝 **MEETING UPDATE - November 27, 2025 (Weekly Customer Connect)**
+
+### **Attendees:**
+Sumit, Parvesh, Surya, Jaganmohan Reddy, Abhishek, Charmi
+
+### **Demo Outcome:**
+- ✅ Backend + UI integration demonstrated successfully
+- ✅ NTA tab added to UI, graph pinning feature planned
+- ✅ Client satisfied with analysis speed and functionality
+
+### **NEW REQUIREMENT: User-Defined Size Ranges (from Jaganmohan)**
+
+**Key Decision:** DO NOT hardcode size categories. Let users choose dynamically.
+
+**Jaganmohan's Guidance:**
+- "Give them the choice to select what range they want"
+- "They will have the freedom to operate - we will not be the persons who judge"
+- Different scientific applications need different segmentation
+
+**Size Categories Mentioned:**
+| Category | Range | Use Case |
+|----------|-------|----------|
+| Small vesicles | 30-100 nm | One categorization |
+| Alternative | 30-150 nm | Another categorization |
+| Custom | User-defined | Scientific flexibility |
+
+**Implementation Required:**
+- Add UI controls: Start range, End range
+- Display: "Particles in {start}-{end}nm: {count}"
+- Allow multiple segments: 30-100, 100-150, etc.
+
+### **Anomaly Detection Vision (Future AI Feature)**
+
+**Jaganmohan's Request:**
+- System should proactively find anomalies across parameter combinations
+- Not just manual parameter selection
+- Alert: "You're getting some anomaly here - look into this"
+
+**Status:** Blocked - waiting for AI/Data Cloud credentials
+
+### **Pending Items from Jaganmohan:**
+- [ ] List of specific graphs/parameters to check for anomalies
+- [ ] Which parameter combinations AI should analyze
+- "I'll sit down and write those points"
+
+### **New Data Timeline:**
+- BioVaram establishing new protocols
+- New experimental data expected in ~2 weeks
+- Surya analyzing recent data internally first
+
+### **Meeting Schedule Changed:**
+- **OLD:** Thursdays 7:50 PM
+- **NEW:** Wednesdays 4:00-5:00 PM (recurring)
 
 ---
 

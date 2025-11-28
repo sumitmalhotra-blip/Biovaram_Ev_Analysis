@@ -1619,6 +1619,83 @@ with tab2:
         d_min, d_max = st.slider("Diameter search range (nm)", 10, 500, (40, 180), step=1)
         n_points = st.number_input("Diameter points (resolution)", value=200, min_value=20, max_value=2000, step=10)
         st.markdown("---")
+        
+        # =====================================================================
+        # USER-DEFINED SIZE RANGES (Nov 27, 2025 - Jaganmohan requirement)
+        # Let users choose their own size categories dynamically
+        # =====================================================================
+        st.markdown('<div class="section-header"><div class="section-icon">📊</div><h4>Size Range Analysis</h4></div>', unsafe_allow_html=True)
+        st.caption("Define custom size ranges to count particles. Different scientific applications need different segmentation.")
+        
+        # Initialize session state for size ranges
+        if "custom_size_ranges" not in st.session_state:
+            # Default ranges based on common EV categorizations
+            st.session_state.custom_size_ranges = [
+                {"name": "Small EVs", "min": 30, "max": 100},
+                {"name": "Medium EVs", "min": 100, "max": 150},
+                {"name": "Large EVs", "min": 150, "max": 200},
+            ]
+        
+        # Show current ranges
+        st.markdown("**Current Size Ranges:**")
+        ranges_to_remove = []
+        for i, r in enumerate(st.session_state.custom_size_ranges):
+            col_name, col_range, col_del = st.columns([2, 2, 1])
+            with col_name:
+                st.text(f"{r['name']}")
+            with col_range:
+                st.text(f"{r['min']}-{r['max']} nm")
+            with col_del:
+                if st.button("🗑️", key=f"del_range_{i}", help="Remove this range"):
+                    ranges_to_remove.append(i)
+        
+        # Remove marked ranges
+        for idx in sorted(ranges_to_remove, reverse=True):
+            st.session_state.custom_size_ranges.pop(idx)
+            st.rerun()
+        
+        # Add new range section
+        with st.expander("➕ Add New Size Range", expanded=False):
+            new_range_name = st.text_input("Range Name", value="", placeholder="e.g., Small vesicles", key="new_range_name")
+            new_range_cols = st.columns(2)
+            with new_range_cols[0]:
+                new_range_min = st.number_input("Min Size (nm)", min_value=0, max_value=500, value=30, step=5, key="new_range_min")
+            with new_range_cols[1]:
+                new_range_max = st.number_input("Max Size (nm)", min_value=0, max_value=500, value=100, step=5, key="new_range_max")
+            
+            if st.button("Add Range", key="add_size_range", use_container_width=True):
+                if new_range_name.strip() and new_range_min < new_range_max:
+                    st.session_state.custom_size_ranges.append({
+                        "name": new_range_name.strip(),
+                        "min": int(new_range_min),
+                        "max": int(new_range_max)
+                    })
+                    st.success(f"Added: {new_range_name} ({new_range_min}-{new_range_max} nm)")
+                    st.rerun()
+                elif new_range_min >= new_range_max:
+                    st.error("Min size must be less than max size")
+                else:
+                    st.error("Please enter a range name")
+        
+        # Quick preset buttons
+        st.markdown("**Quick Presets:**")
+        preset_cols = st.columns(2)
+        with preset_cols[0]:
+            if st.button("30-100, 100-150", key="preset_1", use_container_width=True, help="Standard EV categorization"):
+                st.session_state.custom_size_ranges = [
+                    {"name": "Small EVs (30-100)", "min": 30, "max": 100},
+                    {"name": "Medium EVs (100-150)", "min": 100, "max": 150},
+                ]
+                st.rerun()
+        with preset_cols[1]:
+            if st.button("40-80, 80-120", key="preset_2", use_container_width=True, help="Exosome-focused ranges"):
+                st.session_state.custom_size_ranges = [
+                    {"name": "Exosomes (40-80)", "min": 40, "max": 80},
+                    {"name": "Small MVs (80-120)", "min": 80, "max": 120},
+                ]
+                st.rerun()
+        
+        st.markdown("---")
         st.markdown("**Channels & Cleaning**")
         st.caption("Select columns after uploading the file.")
         ignore_negative = st.checkbox("Ignore negative -H values (replace with NaN)", value=True)
@@ -1885,6 +1962,75 @@ with tab2:
                             <div class="stat-label">Total Particles</div>
                         </div>
                         """, unsafe_allow_html=True)
+
+                    # =====================================================================
+                    # USER-DEFINED SIZE RANGE DISTRIBUTION (Nov 27, 2025 requirement)
+                    # Shows particle counts for each user-defined size range
+                    # =====================================================================
+                    if st.session_state.get("custom_size_ranges"):
+                        st.markdown("---")
+                        st.markdown("### 📊 Size Range Distribution")
+                        st.caption("Particle counts based on your custom size ranges defined in the sidebar.")
+                        
+                        size_data = df['estimated_diameter_nm'].dropna()
+                        
+                        # Calculate counts for each range
+                        range_counts = []
+                        for r in st.session_state.custom_size_ranges:
+                            count = len(size_data[(size_data >= r['min']) & (size_data <= r['max'])])
+                            pct = (count / len(size_data) * 100) if len(size_data) > 0 else 0
+                            range_counts.append({
+                                "name": r['name'],
+                                "range": f"{r['min']}-{r['max']} nm",
+                                "count": count,
+                                "percentage": pct
+                            })
+                        
+                        # Display as stat cards (dynamic number of columns)
+                        num_ranges = len(range_counts)
+                        if num_ranges > 0:
+                            cols = st.columns(min(num_ranges, 4))  # Max 4 columns per row
+                            for i, rc in enumerate(range_counts):
+                                col_idx = i % 4
+                                with cols[col_idx]:
+                                    st.markdown(f"""
+                                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                        <div class="stat-value" style="color: white;">{rc['count']:,}</div>
+                                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">{rc['name']}</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">{rc['range']} • {rc['percentage']:.1f}%</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                        
+                        # Create summary table
+                        range_df = pd.DataFrame(range_counts)
+                        
+                        # Add total row
+                        total_counted = sum(rc['count'] for rc in range_counts)
+                        uncategorized = len(size_data) - total_counted if total_counted <= len(size_data) else 0
+                        
+                        # Show a bar chart of size distributions
+                        if len(range_counts) > 1:
+                            st.markdown("**Distribution by Range:**")
+                            chart_data = pd.DataFrame({
+                                'Range': [rc['name'] for rc in range_counts],
+                                'Count': [rc['count'] for rc in range_counts]
+                            })
+                            st.bar_chart(chart_data.set_index('Range'))
+                        
+                        # Show detailed table
+                        with st.expander("📋 Detailed Size Range Statistics", expanded=False):
+                            range_df_display = range_df.copy()
+                            range_df_display.columns = ['Range Name', 'Size Range', 'Particle Count', 'Percentage (%)']
+                            range_df_display['Percentage (%)'] = range_df_display['Percentage (%)'].apply(lambda x: f"{x:.2f}%")
+                            st.dataframe(range_df_display, use_container_width=True, hide_index=True)
+                            
+                            if uncategorized > 0:
+                                st.info(f"⚠️ {uncategorized:,} particles ({uncategorized/len(size_data)*100:.1f}%) fall outside defined ranges")
+                            
+                            # Size range coverage info
+                            min_defined = min(r['min'] for r in st.session_state.custom_size_ranges)
+                            max_defined = max(r['max'] for r in st.session_state.custom_size_ranges)
+                            st.caption(f"Defined ranges cover: {min_defined}-{max_defined} nm | Data range: {size_data.min():.1f}-{size_data.max():.1f} nm")
 
                     # Results preview
                     preview_cols = [c for c in ["Event/EVs Sl.No", fsc_col, ssc_col, "measured_ratio", "estimated_diameter_nm"] if c in df.columns]

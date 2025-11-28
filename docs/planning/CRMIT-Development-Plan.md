@@ -8,6 +8,44 @@
 
 ---
 
+## 🎉 MEETING UPDATE - November 27, 2025
+
+### **Weekly Customer Connect - Key Outcomes**
+
+**Demo Success:**
+- ✅ Backend + UI integration demonstrated successfully
+- ✅ Analysis running smoothly and fast
+- ✅ NTA tab added to UI for file uploads
+- ✅ Client satisfied with current progress
+
+**NEW REQUIREMENT: User-Defined Size Ranges**
+
+Per Jaganmohan Reddy's guidance:
+- **DO NOT hardcode** size categories (30-100nm, 100-150nm, etc.)
+- **Let users choose** their own range dynamically via UI controls
+- **Reason**: Different scientific applications need different segmentation
+- **Example ranges**:
+  - Small vesicles: 30-100 nm
+  - Alternative: 30-150 nm
+  - Custom: User-defined start/end
+
+**Implementation Required:**
+```python
+# Add to UI: Range selector component
+# User selects: min_size, max_size
+# Display: "Particles in {min}-{max}nm: {count}"
+```
+
+**Waiting On:**
+- ⏳ AI/Data Cloud credentials (after MD meeting with Vinod)
+- ⏳ Parameter graphs list from Jaganmohan (which combinations to analyze)
+- ⏳ New protocol data from BioVaram (~2 weeks)
+
+**Meeting Schedule Changed:**
+- **NEW**: Wednesdays 4:00-5:00 PM (recurring)
+
+---
+
 ## 🚨 CRITICAL UPDATE - November 18, 2025
 
 ### **Mie Scattering Theory Implementation Required**
