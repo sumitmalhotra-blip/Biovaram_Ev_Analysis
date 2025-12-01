@@ -38,7 +38,7 @@ import time
 
 from src.api.config import get_settings
 from src.api.routers import upload, samples, jobs  # type: ignore[import-not-found]
-# from src.database.connection import get_db_engine, close_db_connections
+from src.database.connection import init_database, close_connections, check_connection
 
 settings = get_settings()
 
@@ -59,9 +59,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
     logger.info(f"   Upload directory: {settings.upload_dir}")
     logger.info(f"   Parquet directory: {settings.parquet_dir}")
     
-    # TODO: Initialize database connection pool
-    # engine = get_db_engine()
-    # logger.info(f"   Database: {settings.database_url}")
+    # Initialize database connection pool
+    try:
+        await init_database()
+        logger.info("   Database: Connection pool initialized")
+    except Exception as e:
+        logger.warning(f"   Database: Failed to initialize - {e}")
+        logger.warning("   API will continue without database (file-based mode)")
     
     logger.success("✅ CRMIT API ready")
     
@@ -69,8 +73,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
     
     # Shutdown
     logger.info("🛑 CRMIT API shutting down...")
-    # TODO: Close database connections
-    # await close_db_connections()
+    # Close database connections
+    try:
+        await close_connections()
+        logger.info("   Database connections closed")
+    except Exception as e:
+        logger.warning(f"   Error closing database: {e}")
     logger.success("✅ Cleanup complete")
 
 
@@ -203,8 +211,12 @@ async def system_status():
     Returns:
         System status with diagnostics
     """
-    # TODO: Check database connection
-    db_status = "unknown"  # or "connected", "disconnected"
+    # Check database connection
+    try:
+        db_connected = await check_connection()
+        db_status = "connected" if db_connected else "disconnected"
+    except Exception:
+        db_status = "error"
     
     # Check storage
     upload_dir_exists = settings.upload_dir.exists()

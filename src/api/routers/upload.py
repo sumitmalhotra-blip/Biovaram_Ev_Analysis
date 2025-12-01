@@ -28,10 +28,18 @@ from loguru import logger
 from src.api.config import get_settings
 from src.database.connection import get_session
 from src.database.models import Sample, FCSResult, NTAResult, ProcessingJob  # type: ignore[import-not-found]
+from src.database.crud import (
+    create_sample,
+    get_sample_by_id,
+    update_sample,
+    create_fcs_result,
+    create_nta_result,
+    create_processing_job,
+    update_job_status,
+)
 # Import professional parsers
 from src.parsers.fcs_parser import FCSParser
 from src.parsers.nta_parser import NTAParser
-# from src.database.crud import create_sample, create_fcs_result, create_processing_job
 
 settings = get_settings()
 router = APIRouter()
@@ -200,40 +208,84 @@ async def upload_fcs_file(
             logger.error(f"⚠️ Parser failed: {parse_error}, continuing with upload...")
             fcs_results = None
         
-        # TODO: Create sample record in database
-        # sample = await create_sample(
-        #     db=db,
-        #     sample_id=sample_id,
-        #     file_path_fcs=str(file_path.relative_to(Path.cwd())),
-        #     treatment=treatment,
-        #     concentration_ug=concentration_ug,
-        #     preparation_method=preparation_method,
-        #     operator=operator,
-        #     notes=notes
-        # )
-        
-        # TODO: Create processing job
-        # job_id = str(uuid.uuid4())
-        # job = await create_processing_job(
-        #     db=db,
-        #     job_id=job_id,
-        #     job_type="fcs_parse",
-        #     sample_id=sample.id
-        # )
-        
-        # For now, return mock response
+        # Create sample record in database
+        db_sample = None
+        db_job = None
         job_id = str(uuid.uuid4())
         
-        logger.success(f"✅ FCS file uploaded: {sample_id} (job: {job_id})")
+        try:
+            # Check if sample already exists
+            existing_sample = await get_sample_by_id(db, sample_id)
+            
+            if existing_sample:
+                # Update existing sample with FCS file path
+                db_sample = await update_sample(
+                    db=db,
+                    sample_id=sample_id,
+                    file_path_fcs=str(file_path.relative_to(Path.cwd())),
+                    treatment=treatment,
+                    concentration_ug=concentration_ug,
+                    preparation_method=preparation_method,
+                    operator=operator,
+                    notes=notes,
+                )
+                logger.info(f"📝 Updated existing sample: {sample_id}")
+            else:
+                # Create new sample record
+                db_sample = await create_sample(
+                    db=db,
+                    sample_id=sample_id,
+                    file_path_fcs=str(file_path.relative_to(Path.cwd())),
+                    treatment=treatment,
+                    concentration_ug=concentration_ug,
+                    preparation_method=preparation_method,
+                    operator=operator,
+                    notes=notes,
+                )
+                logger.info(f"✨ Created new sample: {sample_id}")
+            
+            # Create processing job
+            if db_sample:
+                db_job = await create_processing_job(
+                    db=db,
+                    job_id=job_id,
+                    job_type="fcs_parse",
+                    sample_id=db_sample.id,
+                )
+                logger.info(f"📋 Created processing job: {job_id}")
+                
+                # If parsing succeeded, save FCS results to database
+                if fcs_results:
+                    await create_fcs_result(
+                        db=db,
+                        sample_id=db_sample.id,
+                        total_events=fcs_results.get('event_count', 0),
+                        fsc_mean=fcs_results.get('mean_fsc'),
+                        ssc_mean=fcs_results.get('mean_ssc'),
+                    )
+                    # Mark job as completed
+                    await update_job_status(
+                        db=db,
+                        job_id=job_id,
+                        status="completed",
+                        result_data=fcs_results,
+                    )
+                    logger.success(f"💾 Saved FCS results to database")
+                    
+        except Exception as db_error:
+            logger.warning(f"⚠️ Database operation failed: {db_error}")
+            logger.warning("   Continuing with file-based response...")
+            db_sample = None
         
-        # TODO: Replace with actual database ID once database is connected
-        # For now, use a hash of the sample_id as a temporary numeric ID
-        temp_id = abs(hash(sample_id)) % 1000000
+        # Get database ID or use temporary ID
+        db_id = db_sample.id if db_sample else abs(hash(sample_id)) % 1000000
+        
+        logger.success(f"✅ FCS file uploaded: {sample_id} (job: {job_id})")
         
         # Build response with parsed results
         response_data = {
             "success": True,
-            "id": temp_id,  # Numeric database ID (temporary)
+            "id": db_id,  # Database ID (real if DB connected, temp otherwise)
             "sample_id": sample_id,  # String display name
             "treatment": treatment,
             "concentration_ug": concentration_ug,
@@ -323,21 +375,62 @@ async def upload_nta_file(
         file_path = settings.upload_dir / f"{timestamp}_{file.filename}"
         await save_uploaded_file(file, file_path)
         
-        # TODO: Create or update sample record
-        # TODO: Create processing job
-        
+        # Create or update sample record in database
+        db_sample = None
+        db_job = None
         job_id = str(uuid.uuid4())
         
-        logger.success(f"✅ NTA file uploaded: {sample_id} (job: {job_id})")
+        try:
+            # Check if sample already exists
+            existing_sample = await get_sample_by_id(db, sample_id)
+            
+            if existing_sample:
+                # Update existing sample with NTA file path
+                db_sample = await update_sample(
+                    db=db,
+                    sample_id=sample_id,
+                    file_path_nta=str(file_path.relative_to(Path.cwd())),
+                    treatment=treatment,
+                    operator=operator,
+                    notes=notes,
+                )
+                logger.info(f"📝 Updated existing sample with NTA: {sample_id}")
+            else:
+                # Create new sample record
+                db_sample = await create_sample(
+                    db=db,
+                    sample_id=sample_id,
+                    file_path_nta=str(file_path.relative_to(Path.cwd())),
+                    treatment=treatment,
+                    operator=operator,
+                    notes=notes,
+                )
+                logger.info(f"✨ Created new sample: {sample_id}")
+            
+            # Create processing job
+            if db_sample:
+                db_job = await create_processing_job(
+                    db=db,
+                    job_id=job_id,
+                    job_type="nta_parse",
+                    sample_id=db_sample.id,
+                )
+                logger.info(f"📋 Created processing job: {job_id}")
+                
+        except Exception as db_error:
+            logger.warning(f"⚠️ Database operation failed: {db_error}")
+            logger.warning("   Continuing with file-based response...")
+            db_sample = None
         
-        # TODO: Replace with actual database ID once database is connected
-        # For now, use a hash of the sample_id as a temporary numeric ID
-        temp_id = abs(hash(sample_id)) % 1000000
+        # Get database ID or use temporary ID
+        db_id = db_sample.id if db_sample else abs(hash(sample_id)) % 1000000
+        
+        logger.success(f"✅ NTA file uploaded: {sample_id} (job: {job_id})")
         
         # Return complete sample data to avoid additional API calls
         return {
             "success": True,
-            "id": temp_id,  # Numeric database ID (temporary)
+            "id": db_id,  # Database ID (real if DB connected, temp otherwise)
             "sample_id": sample_id,  # String display name
             "treatment": treatment,
             "temperature_celsius": temperature_celsius,
