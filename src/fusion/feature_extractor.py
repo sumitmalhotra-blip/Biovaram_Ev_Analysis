@@ -238,7 +238,7 @@ class FeatureExtractor:
         combined = sample_registry.copy()
         
         # Merge FCS features
-        if fcs_features is not None:
+        if fcs_features is not None and len(fcs_features) > 0 and 'sample_id' in fcs_features.columns:
             combined = combined.merge(
                 fcs_features,
                 left_on='sample_id_fcs',
@@ -251,7 +251,7 @@ class FeatureExtractor:
                 combined = combined.drop(columns=['sample_id_fcs_dup'])
         
         # Merge NTA features
-        if nta_features is not None:
+        if nta_features is not None and len(nta_features) > 0 and 'sample_id' in nta_features.columns:
             combined = combined.merge(
                 nta_features,
                 left_on='sample_id_nta',

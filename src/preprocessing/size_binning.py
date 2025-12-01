@@ -128,18 +128,40 @@ class SizeBinning:
         # -------------------------------------------------------
         # D50 = 50th percentile = median particle size in the distribution
         # This is the most representative single value for the sample
+        # Handle both uppercase (D50) and lowercase (d50_nm) column naming conventions
+        size_column = None
         if 'D50' in nta_data.columns:
-            nta_binned['size_bin'] = nta_data['D50'].apply(self._assign_bin)
+            size_column = 'D50'
+        elif 'd50_nm' in nta_data.columns:
+            size_column = 'd50_nm'
+        elif 'median_size_nm' in nta_data.columns:
+            size_column = 'median_size_nm'
         elif 'mean_size' in nta_data.columns:
-            nta_binned['size_bin'] = nta_data['mean_size'].apply(self._assign_bin)
+            size_column = 'mean_size'
+        elif 'mean_size_nm' in nta_data.columns:
+            size_column = 'mean_size_nm'
+        
+        if size_column:
+            nta_binned['size_bin'] = nta_data[size_column].apply(self._assign_bin)
         else:
             logger.warning("No size column found, cannot bin data")
             return nta_binned
         
+        # Normalize column names for percentage calculation
+        # Map various naming conventions to standard D10, D50, D90
+        calc_data = nta_data.copy()
+        col_mapping = {
+            'd10_nm': 'D10', 'd50_nm': 'D50', 'd90_nm': 'D90',
+            'D10_nm': 'D10', 'D50_nm': 'D50', 'D90_nm': 'D90',
+        }
+        for old_col, new_col in col_mapping.items():
+            if old_col in calc_data.columns and new_col not in calc_data.columns:
+                calc_data[new_col] = calc_data[old_col]
+        
         # Calculate percentage in each bin (estimated from D10, D50, D90)
         for i, (bin_min, bin_max) in enumerate(self.bins):
             bin_label = self.bin_labels[i]
-            nta_binned[f'pct_{bin_label}'] = nta_data.apply(
+            nta_binned[f'pct_{bin_label}'] = calc_data.apply(
                 lambda row: self._estimate_bin_percentage(row, bin_min, bin_max),
                 axis=1
             )

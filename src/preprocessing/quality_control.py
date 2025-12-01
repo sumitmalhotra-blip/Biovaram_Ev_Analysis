@@ -102,6 +102,20 @@ class QualityControl:
         fcs_data.loc[negative_events, 'qc_flags'] += 'negative_events;'
         
         # ============================================================
+        # Check 1b: Minimum Event Count Threshold
+        # ============================================================
+        # WHAT: Verify that total_events >= MIN_EVENTS_THRESHOLD (1000)
+        # WHY: Too few events means:
+        #      - Insufficient statistical power for analysis
+        #      - Possible acquisition failure or very dilute sample
+        #      - Cannot reliably calculate percentages/statistics
+        # ACTION: Mark as 'fail' - not enough data for reliable analysis
+        MIN_EVENTS_THRESHOLD = 1000  # Minimum viable event count
+        low_events = (fcs_data['total_events'] > 0) & (fcs_data['total_events'] < MIN_EVENTS_THRESHOLD)
+        fcs_data.loc[low_events, 'qc_status'] = 'fail'
+        fcs_data.loc[low_events, 'qc_flags'] += 'low_event_count;'
+        
+        # ============================================================
         # Check 2: Invalid Scatter Values
         # ============================================================
         # WHAT: Check FSC-A and SSC-A means are positive

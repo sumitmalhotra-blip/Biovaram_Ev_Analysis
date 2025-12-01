@@ -259,7 +259,7 @@ class DataIntegrator:
         )
         
         summary_path = self.output_dir / 'integration_summary.txt'
-        with open(summary_path, 'w') as f:
+        with open(summary_path, 'w', encoding='utf-8') as f:
             f.write(summary)
         logger.info(f"   ✅ Summary report saved: {summary_path}")
         
@@ -363,11 +363,11 @@ class DataIntegrator:
         
         # Architecture compliance
         report.append("ARCHITECTURE COMPLIANCE:")
-        report.append("  ✅ Layer 2: Data Preprocessing")
+        report.append("  [OK] Layer 2: Data Preprocessing")
         report.append("     - Quality Control: IMPLEMENTED")
         report.append("     - Normalization: IMPLEMENTED")
         report.append("     - Size Binning: IMPLEMENTED")
-        report.append("  ✅ Layer 4: Multi-Modal Fusion")
+        report.append("  [OK] Layer 4: Multi-Modal Fusion")
         report.append("     - Sample Matching: IMPLEMENTED")
         report.append("     - Feature Extraction: IMPLEMENTED")
         report.append("     - Cross-Instrument Correlation: IMPLEMENTED")

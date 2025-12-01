@@ -164,14 +164,16 @@ class TestDataNormalization:
         normalizer = DataNormalizer()
         normalized = normalizer.normalize_fcs_data(sample_fcs_data, method='zscore')
         
-        # Check that numerical columns are normalized
-        # Mean should be ~0, std should be ~1
+        # Check that normalized columns are created with '_norm' suffix
+        # The original columns remain unchanged, new columns are added
+        # Mean of normalized column should be ~0, std should be ~1
         for col in ['VFSC-H_mean', 'VSSC-H_mean']:
-            if col in normalized.columns:
-                mean = normalized[col].mean()
-                std = normalized[col].std()
-                assert abs(mean) < 0.1  # Close to 0
-                assert abs(std - 1.0) < 0.1  # Close to 1
+            norm_col = f'{col}_norm'
+            if norm_col in normalized.columns:
+                mean = normalized[norm_col].mean()
+                std = normalized[norm_col].std()
+                assert abs(mean) < 0.1, f"Mean of {norm_col} should be ~0, got {mean}"
+                assert abs(std - 1.0) < 0.1, f"Std of {norm_col} should be ~1, got {std}"
     
     def test_baseline_normalization(self, sample_fcs_data):
         """Test baseline (control) normalization."""
@@ -209,9 +211,9 @@ class TestSizeBinning:
         binner = SizeBinning()
         binned = binner.bin_nta_data(sample_nta_data)
         
-        # Should have percentage columns
-        bin_cols = [col for col in binned.columns if 'bin_' in col and '_pct' in col]
-        assert len(bin_cols) > 0
+        # Should have percentage columns (format: pct_{bin_label})
+        pct_cols = [col for col in binned.columns if col.startswith('pct_')]
+        assert len(pct_cols) > 0, f"Expected percentage columns, got: {list(binned.columns)}"
 
 
 # ============================================================================

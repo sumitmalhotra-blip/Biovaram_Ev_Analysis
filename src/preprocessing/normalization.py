@@ -100,13 +100,26 @@ class DataNormalizer:
         # Default: normalize all scatter and fluorescence channels
         # User can override by specifying specific columns
         if columns is None:
-            columns = [
+            # Standard channel names
+            standard_cols = [
                 'FSC-A_mean', 'FSC-A_median', 'FSC-H_mean',  # Forward scatter
                 'SSC-A_mean', 'SSC-A_median', 'SSC-H_mean',  # Side scatter
                 'FL1-A_mean', 'FL2-A_mean', 'FL3-A_mean'     # Fluorescence
             ]
+            # Vendor-specific channel names (e.g., ZE5, Cytoflex)
+            vendor_cols = [
+                'VFSC-A_mean', 'VFSC-H_mean',  # Vendor forward scatter
+                'VSSC-A_mean', 'VSSC-H_mean', 'VSSC1-A_mean',  # Vendor side scatter
+                'B531-A_mean', 'Y585-A_mean', 'V450-A_mean'  # Vendor fluorescence
+            ]
             # Filter to only columns that exist in the data
-            columns = [c for c in columns if c in fcs_data.columns]
+            columns = [c for c in standard_cols + vendor_cols if c in fcs_data.columns]
+            
+            # If no predefined columns found, normalize all numeric columns except metadata
+            if not columns:
+                exclude_cols = ['sample_id', 'file_name', 'total_events', 'qc_status', 'qc_flags']
+                numeric_cols = fcs_data.select_dtypes(include=[np.number]).columns.tolist()
+                columns = [c for c in numeric_cols if c not in exclude_cols]
         
         # Step 2: Normalize each column using selected method
         # ----------------------------------------------------
