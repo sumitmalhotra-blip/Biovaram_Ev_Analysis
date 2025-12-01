@@ -246,11 +246,11 @@ class TestIntegrationPipeline:
             )
             
             # Check that output files were created
-            assert output_files['sample_metadata'].exists()
-            assert output_files['combined_features'].exists()
-            assert output_files['qc_report'].exists()
-            assert output_files['match_report'].exists()
-            assert output_files['summary'].exists()
+            assert output_files['sample_metadata'] is not None and output_files['sample_metadata'].exists()
+            assert output_files['combined_features'] is not None and output_files['combined_features'].exists()
+            assert output_files['qc_report'] is not None and output_files['qc_report'].exists()
+            assert output_files['match_report'] is not None and output_files['match_report'].exists()
+            assert output_files['summary'] is not None and output_files['summary'].exists()
             
             # Check combined features
             combined = pd.read_parquet(output_files['combined_features'])

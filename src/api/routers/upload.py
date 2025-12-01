@@ -168,7 +168,8 @@ async def upload_fcs_file(
     
     try:
         # Validate file extension
-        if not file.filename.lower().endswith('.fcs'):
+        filename = file.filename or ""
+        if not filename.lower().endswith('.fcs'):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid file type. Only .fcs files are accepted."
@@ -361,7 +362,8 @@ async def upload_nta_file(
     
     try:
         # Validate file extension
-        if not (file.filename.lower().endswith('.txt') or file.filename.lower().endswith('.csv')):
+        filename = file.filename or ""
+        if not (filename.lower().endswith('.txt') or filename.lower().endswith('.csv')):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid file type. Only .txt and .csv files are accepted."
@@ -496,12 +498,13 @@ async def upload_batch(
     for file in files:
         try:
             # Determine file type
-            if file.filename.lower().endswith('.fcs'):
+            filename = file.filename or ""
+            if filename.lower().endswith('.fcs'):
                 result = await upload_fcs_file(file=file, db=db)
-            elif file.filename.lower().endswith(('.txt', '.csv')):
+            elif filename.lower().endswith(('.txt', '.csv')):
                 result = await upload_nta_file(file=file, db=db)
             else:
-                raise ValueError(f"Unsupported file type: {file.filename}")
+                raise ValueError(f"Unsupported file type: {filename}")
             
             results["uploaded"] += 1
             results["job_ids"].append(result["job_id"])

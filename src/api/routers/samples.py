@@ -107,6 +107,7 @@ async def list_samples(
         # Format response
         samples_data = []
         for sample in samples:
+            upload_ts = getattr(sample, 'upload_timestamp', None)
             samples_data.append({
                 "id": sample.id,
                 "sample_id": sample.sample_id,
@@ -114,7 +115,7 @@ async def list_samples(
                 "treatment": sample.treatment,
                 "qc_status": sample.qc_status,
                 "processing_status": sample.processing_status,
-                "upload_timestamp": sample.upload_timestamp.isoformat() if sample.upload_timestamp else None,
+                "upload_timestamp": upload_ts.isoformat() if upload_ts else None,
                 "has_fcs": sample.file_path_fcs is not None,
                 "has_nta": sample.file_path_nta is not None,
                 "has_tem": sample.file_path_tem is not None,
@@ -197,6 +198,9 @@ async def get_sample(
         qc_query = select(func.count()).select_from(QCReport).where(QCReport.sample_id == sample.id)
         qc_count = (await db.execute(qc_query)).scalar()
         
+        upload_ts = getattr(sample, 'upload_timestamp', None)
+        exp_date = getattr(sample, 'experiment_date', None)
+        
         return {
             "id": sample.id,
             "sample_id": sample.sample_id,
@@ -210,8 +214,8 @@ async def get_sample(
             "processing_status": sample.processing_status,
             "operator": sample.operator,
             "notes": sample.notes,
-            "upload_timestamp": sample.upload_timestamp.isoformat() if sample.upload_timestamp else None,
-            "experiment_date": sample.experiment_date.isoformat() if sample.experiment_date else None,
+            "upload_timestamp": upload_ts.isoformat() if upload_ts else None,
+            "experiment_date": exp_date.isoformat() if exp_date else None,
             "files": {
                 "fcs": sample.file_path_fcs,
                 "nta": sample.file_path_nta,
@@ -284,6 +288,7 @@ async def get_fcs_results(
         
         results_data = []
         for fcs in fcs_results:
+            processed = getattr(fcs, 'processed_at', None)
             results_data.append({
                 "id": fcs.id,
                 "total_events": fcs.total_events,
@@ -298,7 +303,7 @@ async def get_fcs_results(
                 "cd63_positive_pct": fcs.cd63_positive_pct,
                 "debris_pct": fcs.debris_pct,
                 "doublets_pct": fcs.doublets_pct,
-                "processed_at": fcs.processed_at.isoformat() if fcs.processed_at else None,
+                "processed_at": processed.isoformat() if processed else None,
                 "parquet_file": fcs.parquet_file_path,
             })
         
@@ -367,6 +372,7 @@ async def get_nta_results(
         
         results_data = []
         for nta in nta_results:
+            processed = getattr(nta, 'processed_at', None)
             results_data.append({
                 "id": nta.id,
                 "mean_size_nm": nta.mean_size_nm,
@@ -380,7 +386,7 @@ async def get_nta_results(
                 "bin_50_80nm_pct": nta.bin_50_80nm_pct,
                 "bin_80_100nm_pct": nta.bin_80_100nm_pct,
                 "bin_100_120nm_pct": nta.bin_100_120nm_pct,
-                "processed_at": nta.processed_at.isoformat() if nta.processed_at else None,
+                "processed_at": processed.isoformat() if processed else None,
                 "parquet_file": nta.parquet_file_path,
             })
         

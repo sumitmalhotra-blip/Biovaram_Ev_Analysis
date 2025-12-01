@@ -205,7 +205,8 @@ async def check_connection() -> bool:
     try:
         factory = get_session_factory()
         async with factory() as session:
-            await session.execute("SELECT 1")
+            from sqlalchemy import text
+            await session.execute(text("SELECT 1"))
         logger.success("✅ Database connection verified")
         return True
     except Exception as e:

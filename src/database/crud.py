@@ -162,7 +162,7 @@ async def get_samples(
     query = query.order_by(Sample.acquisition_date.desc()).offset(skip).limit(limit)
     
     result = await db.execute(query)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def update_sample(
@@ -285,7 +285,7 @@ async def get_fcs_results_by_sample(
     """
     query = select(FCSResult).where(FCSResult.sample_id == sample_id)
     result = await db.execute(query)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 # ============================================================================
@@ -340,9 +340,7 @@ async def get_nta_results_by_sample(
     """
     query = select(NTAResult).where(NTAResult.sample_id == sample_id)
     result = await db.execute(query)
-    return result.scalars().all()
-
-
+    return list(result.scalars().all())
 # ============================================================================
 # Processing Job CRUD Operations
 # ============================================================================
@@ -427,14 +425,15 @@ async def update_job_progress(
             logger.warning(f"⚠️ Job not found for progress update: {job_id}")
             return None
         
-        job.progress_percent = progress_percent
+        setattr(job, 'progress_percent', progress_percent)
         if current_step:
-            job.current_step = current_step
+            setattr(job, 'current_step', current_step)
         
         # Set started_at if not already set
-        if job.status == "pending":
-            job.status = "running"
-            job.started_at = datetime.utcnow()
+        job_status = getattr(job, 'status', None)
+        if job_status == "pending":
+            setattr(job, 'status', "running")
+            setattr(job, 'started_at', datetime.utcnow())
         
         await db.commit()
         await db.refresh(job)
@@ -476,25 +475,28 @@ async def update_job_status(
             logger.warning(f"⚠️ Job not found for status update: {job_id}")
             return None
         
-        old_status = job.status
-        job.status = status
+        old_status = getattr(job, 'status', None)
+        setattr(job, 'status', status)
         
         # Set started_at if transitioning to running
-        if status == "running" and not job.started_at:
-            job.started_at = datetime.utcnow()
+        job_started = getattr(job, 'started_at', None)
+        if status == "running" and job_started is None:
+            setattr(job, 'started_at', datetime.utcnow())
         
         # Set completed_at if transitioning to terminal state
-        if status in ["completed", "failed", "cancelled"] and not job.completed_at:
-            job.completed_at = datetime.utcnow()
-            job.progress_percent = 100 if status == "completed" else job.progress_percent
+        job_completed = getattr(job, 'completed_at', None)
+        if status in ["completed", "failed", "cancelled"] and job_completed is None:
+            setattr(job, 'completed_at', datetime.utcnow())
+            if status == "completed":
+                setattr(job, 'progress_percent', 100)
         
         # Set result or error data
         if result_data:
-            job.result_data = result_data
+            setattr(job, 'result_data', result_data)
         if error_message:
-            job.error_message = error_message
+            setattr(job, 'error_message', error_message)
         if error_traceback:
-            job.error_traceback = error_traceback
+            setattr(job, 'error_traceback', error_traceback)
         
         await db.commit()
         await db.refresh(job)
@@ -526,7 +528,7 @@ async def get_jobs_by_sample(
         ProcessingJob.created_at.desc()
     )
     result = await db.execute(query)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 # ============================================================================
@@ -592,7 +594,7 @@ async def get_qc_reports_by_sample(
         QCReport.created_at.desc()
     )
     result = await db.execute(query)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 # ============================================================================
@@ -611,28 +613,28 @@ async def get_sample_counts(db: AsyncSession) -> Dict[str, int]:
     """
     # Total samples
     total_query = select(func.count()).select_from(Sample)
-    total = (await db.execute(total_query)).scalar()
+    total = (await db.execute(total_query)).scalar() or 0
     
     # By processing status
     pending_query = select(func.count()).select_from(Sample).where(  # type: ignore[arg-type]
         Sample.processing_status == ProcessingStatus.PENDING
     )
-    pending = (await db.execute(pending_query)).scalar()
+    pending = (await db.execute(pending_query)).scalar() or 0
     
     processing_query = select(func.count()).select_from(Sample).where(  # type: ignore[arg-type]
-        Sample.processing_status == ProcessingStatus.PROCESSING
+        Sample.processing_status == ProcessingStatus.RUNNING
     )
-    processing = (await db.execute(processing_query)).scalar()
+    processing = (await db.execute(processing_query)).scalar() or 0
     
     completed_query = select(func.count()).select_from(Sample).where(  # type: ignore[arg-type]
         Sample.processing_status == ProcessingStatus.COMPLETED
     )
-    completed = (await db.execute(completed_query)).scalar()
+    completed = (await db.execute(completed_query)).scalar() or 0
     
     failed_query = select(func.count()).select_from(Sample).where(
         Sample.processing_status == ProcessingStatus.FAILED
     )
-    failed = (await db.execute(failed_query)).scalar()
+    failed = (await db.execute(failed_query)).scalar() or 0
     
     return {
         "total": total,
@@ -655,28 +657,28 @@ async def get_job_counts(db: AsyncSession) -> Dict[str, int]:
     """
     # Total jobs
     total_query = select(func.count()).select_from(ProcessingJob)
-    total = (await db.execute(total_query)).scalar()
+    total = (await db.execute(total_query)).scalar() or 0
     
     # By status
     pending_query = select(func.count()).select_from(ProcessingJob).where(
         ProcessingJob.status == "pending"
     )
-    pending = (await db.execute(pending_query)).scalar()
+    pending = (await db.execute(pending_query)).scalar() or 0
     
     running_query = select(func.count()).select_from(ProcessingJob).where(
         ProcessingJob.status == "running"
     )
-    running = (await db.execute(running_query)).scalar()
+    running = (await db.execute(running_query)).scalar() or 0
     
     completed_query = select(func.count()).select_from(ProcessingJob).where(
         ProcessingJob.status == "completed"
     )
-    completed = (await db.execute(completed_query)).scalar()
+    completed = (await db.execute(completed_query)).scalar() or 0
     
     failed_query = select(func.count()).select_from(ProcessingJob).where(
         ProcessingJob.status == "failed"
     )
-    failed = (await db.execute(failed_query)).scalar()
+    failed = (await db.execute(failed_query)).scalar() or 0
     
     return {
         "total": total,

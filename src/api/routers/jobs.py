@@ -98,23 +98,29 @@ async def list_jobs(
         jobs_data = []
         for job in jobs:
             sample_id = None
-            if job.sample_id:
-                sample_query = select(Sample.sample_id).where(Sample.id == job.sample_id)
+            job_sample_id = getattr(job, 'sample_id', None)
+            if job_sample_id is not None:
+                sample_query = select(Sample.sample_id).where(Sample.id == job_sample_id)
                 sample_result = await db.execute(sample_query)
                 sample_id = sample_result.scalar_one_or_none()
+            
+            job_status = getattr(job, 'status', None)
+            job_created = getattr(job, 'created_at', None)
+            job_started = getattr(job, 'started_at', None)
+            job_completed = getattr(job, 'completed_at', None)
             
             jobs_data.append({
                 "id": job.id,
                 "job_id": job.job_id,
                 "job_type": job.job_type,
-                "status": job.status,
+                "status": job_status,
                 "progress_percent": job.progress_percent,
                 "current_step": job.current_step,
-                "created_at": job.created_at.isoformat() if job.created_at else None,
-                "started_at": job.started_at.isoformat() if job.started_at else None,
-                "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+                "created_at": job_created.isoformat() if job_created else None,
+                "started_at": job_started.isoformat() if job_started else None,
+                "completed_at": job_completed.isoformat() if job_completed else None,
                 "sample_id": sample_id,
-                "error_message": job.error_message if job.status == "failed" else None,
+                "error_message": getattr(job, 'error_message', None) if job_status == "failed" else None,
             })
         
         return {
@@ -186,25 +192,31 @@ async def get_job_status(
         
         # Get sample_id
         sample_id = None
-        if job.sample_id:
-            sample_query = select(Sample.sample_id).where(Sample.id == job.sample_id)
+        job_sample_id = getattr(job, 'sample_id', None)
+        if job_sample_id is not None:
+            sample_query = select(Sample.sample_id).where(Sample.id == job_sample_id)
             sample_result = await db.execute(sample_query)
             sample_id = sample_result.scalar_one_or_none()
+        
+        job_status = getattr(job, 'status', None)
+        job_created = getattr(job, 'created_at', None)
+        job_started = getattr(job, 'started_at', None)
+        job_completed = getattr(job, 'completed_at', None)
         
         return {
             "id": job.id,
             "job_id": job.job_id,
             "job_type": job.job_type,
-            "status": job.status,
+            "status": job_status,
             "progress_percent": job.progress_percent,
             "current_step": job.current_step,
             "sample_id": sample_id,
-            "created_at": job.created_at.isoformat() if job.created_at else None,
-            "started_at": job.started_at.isoformat() if job.started_at else None,
-            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+            "created_at": job_created.isoformat() if job_created else None,
+            "started_at": job_started.isoformat() if job_started else None,
+            "completed_at": job_completed.isoformat() if job_completed else None,
             "result_data": job.result_data,
             "error_message": job.error_message,
-            "error_traceback": job.error_traceback if job.status == "failed" else None,
+            "error_traceback": getattr(job, 'error_traceback', None) if job_status == "failed" else None,
         }
         
     except HTTPException:
@@ -266,11 +278,11 @@ async def cancel_job(
                 detail=f"Cannot cancel job with status: {job.status}"
             )
         
-        previous_status = job.status
+        previous_status = getattr(job, 'status', None)
         
-        # Update job status
-        job.status = "cancelled"
-        job.current_step = "Cancelled by user"
+        # Update job status using setattr for SQLAlchemy compatibility
+        setattr(job, 'status', "cancelled")
+        setattr(job, 'current_step', "Cancelled by user")
         await db.commit()
         
         logger.warning(f"🚫 Job cancelled: {job_id} (was: {previous_status})")
@@ -335,10 +347,11 @@ async def retry_job(
             )
         
         # Check if job can be retried
-        if job.status != "failed":
+        job_status = getattr(job, 'status', None)
+        if job_status != "failed":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Can only retry failed jobs. Current status: {job.status}"
+                detail=f"Can only retry failed jobs. Current status: {job_status}"
             )
         
         # TODO: Create new job with same parameters
