@@ -63,7 +63,7 @@ class FeatureExtractor:
         for _, row in fcs_data.iterrows():
             feature = {
                 'sample_id': row['sample_id'],
-                'fcs_file_name': row['file_name'],
+                'fcs_file_name': row.get('file_name', row['sample_id']),  # Use sample_id as fallback
                 
                 # Scatter intensity features
                 'fcs_fsc_a_mean': row.get('FSC-A_mean', np.nan),
@@ -127,7 +127,7 @@ class FeatureExtractor:
         for _, row in nta_data.iterrows():
             feature = {
                 'sample_id': row['sample_id'],
-                'nta_file_name': row['file_name'],
+                'nta_file_name': row.get('file_name', row['sample_id']),  # Use sample_id as fallback
                 
                 # Size distribution features
                 'nta_d10': row.get('D10', np.nan),
@@ -228,9 +228,11 @@ class FeatureExtractor:
         """
         logger.info("🔗 Merging features across instruments...")
         
-        # Use cached features if not provided
-        fcs_features = fcs_features or self.fcs_features
-        nta_features = nta_features or self.nta_features
+        # Use cached features if not provided - handle DataFrame vs None properly
+        if fcs_features is None:
+            fcs_features = self.fcs_features
+        if nta_features is None:
+            nta_features = self.nta_features
         
         # Start with sample registry
         combined = sample_registry.copy()

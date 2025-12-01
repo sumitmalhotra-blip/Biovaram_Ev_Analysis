@@ -110,7 +110,13 @@ class SampleMatcher:
         if 'sample_id' not in metadata.columns:
             raise ValueError(f"{instrument} metadata missing 'sample_id' column")
         
-        samples = metadata[['sample_id', 'file_name']].copy()
+        # Handle optional file_name column - use sample_id as fallback
+        if 'file_name' in metadata.columns:
+            samples = metadata[['sample_id', 'file_name']].copy()
+        else:
+            samples = metadata[['sample_id']].copy()
+            samples['file_name'] = samples['sample_id']  # Use sample_id as fallback
+        
         samples['instrument'] = instrument
         samples['original_sample_id'] = samples['sample_id']
         

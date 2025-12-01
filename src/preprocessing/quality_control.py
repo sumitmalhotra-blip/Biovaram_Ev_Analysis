@@ -176,8 +176,15 @@ class QualityControl:
         nta_data['qc_flags'] = ''
         
         # Check 1: Temperature compliance
-        if 'temperature' in nta_data.columns:
-            temp_out_of_range = (nta_data['temperature'] < self.temp_min) | (nta_data['temperature'] > self.temp_max)
+        # Support both 'temperature' and 'temperature_celsius' column names
+        temp_col = None
+        if 'temperature_celsius' in nta_data.columns:
+            temp_col = 'temperature_celsius'
+        elif 'temperature' in nta_data.columns:
+            temp_col = 'temperature'
+        
+        if temp_col is not None:
+            temp_out_of_range = (nta_data[temp_col] < self.temp_min) | (nta_data[temp_col] > self.temp_max)
             nta_data.loc[temp_out_of_range, 'qc_status'] = 'fail'
             nta_data.loc[temp_out_of_range, 'qc_flags'] += 'temp_out_of_range;'
         

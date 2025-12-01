@@ -46,6 +46,7 @@ class ProcessingStatus(str, enum.Enum):
 
 class QCStatus(str, enum.Enum):
     """Quality control status."""
+    PENDING = "pending"  # Initial state before QC runs
     PASS = "pass"
     WARN = "warn"
     FAIL = "fail"
