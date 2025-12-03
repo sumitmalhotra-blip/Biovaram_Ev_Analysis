@@ -186,10 +186,11 @@ class CRMITAPIClient:
         concentration_ug: Optional[float] = None,
         preparation_method: Optional[str] = None,
         operator: Optional[str] = None,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
+        experiment_params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Upload FCS file with metadata.
+        Upload FCS file with metadata and experiment parameters.
         
         Args:
             file_path: Path to .fcs file
@@ -199,6 +200,15 @@ class CRMITAPIClient:
             preparation_method: Purification method (SEC, Centrifugation, etc.)
             operator: Name of person who performed experiment
             notes: Additional notes
+            experiment_params: Dictionary containing experiment parameters:
+                - temperature_celsius: Sample temperature during measurement
+                - substrate: Buffer/substrate used (e.g., "PBS (pH 7.4)")
+                - volume_ul: Sample volume in microliters
+                - ph: Sample pH value
+                - incubation_time_min: Incubation time in minutes
+                - staining_protocol: Type of staining used
+                - dilution_factor: Dilution ratio (e.g., "1:100")
+                - instrument_settings: Any special instrument settings
             
         Returns:
             Upload confirmation with sample_id, file_path, processing_status
@@ -209,7 +219,13 @@ class CRMITAPIClient:
             ...     sample_id="L5_F10_CD81",
             ...     treatment="CD81",
             ...     concentration_ug=1.0,
-            ...     preparation_method="SEC"
+            ...     preparation_method="SEC",
+            ...     experiment_params={
+            ...         "temperature_celsius": 25.0,
+            ...         "substrate": "PBS (pH 7.4)",
+            ...         "volume_ul": 50.0,
+            ...         "ph": 7.4
+            ...     }
             ... )
             {
                 'sample_id': 'L5_F10_CD81',
@@ -235,6 +251,25 @@ class CRMITAPIClient:
                     data['operator'] = operator
                 if notes:
                     data['notes'] = notes
+                
+                # Add experiment parameters (flatten for form data)
+                if experiment_params:
+                    if experiment_params.get('temperature_celsius') is not None:
+                        data['temperature_celsius'] = str(experiment_params['temperature_celsius'])
+                    if experiment_params.get('substrate'):
+                        data['substrate'] = experiment_params['substrate']
+                    if experiment_params.get('volume_ul') is not None:
+                        data['volume_ul'] = str(experiment_params['volume_ul'])
+                    if experiment_params.get('ph') is not None:
+                        data['ph'] = str(experiment_params['ph'])
+                    if experiment_params.get('incubation_time_min') is not None:
+                        data['incubation_time_min'] = str(experiment_params['incubation_time_min'])
+                    if experiment_params.get('staining_protocol'):
+                        data['staining_protocol'] = experiment_params['staining_protocol']
+                    if experiment_params.get('dilution_factor'):
+                        data['dilution_factor'] = experiment_params['dilution_factor']
+                    if experiment_params.get('instrument_settings'):
+                        data['instrument_settings'] = experiment_params['instrument_settings']
                 
                 # Upload
                 response = requests.post(

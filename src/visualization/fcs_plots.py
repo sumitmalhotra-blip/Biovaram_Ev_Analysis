@@ -1,4 +1,4 @@
-﻿"""
+"""
 FCS Visualization Module
 
 Generates scatter plots and density plots for Flow Cytometry (FCS) data.
@@ -12,6 +12,7 @@ Task: 1.3.1 - FCS Scatter Plot Generation
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import seaborn as sns
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict
@@ -64,11 +65,11 @@ class FCSPlotter:
         sample_size: int = 10000,
         colormap: str = "viridis",
         use_particle_size: bool = False
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create scatter plot for two FCS channels with multiple visualization options.
         
-        ⚠️ MEETING UPDATE (Nov 18, 2025):
+        ?? MEETING UPDATE (Nov 18, 2025):
         - Prefer Size vs Intensity plots over Area vs Area
         - Use use_particle_size=True to plot particle_size_nm vs intensity
         - Area vs Area plots are not biologically meaningful
@@ -261,7 +262,7 @@ class FCSPlotter:
         gate_threshold: Optional[float] = None,
         show_stats: bool = True,
         color: str = 'steelblue'
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create 1D histogram for fluorescence intensity analysis.
         
@@ -397,7 +398,7 @@ class FCSPlotter:
         data: pd.DataFrame,
         output_file: Optional[Path] = None,
         plot_type: str = "hexbin"
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create standard FSC-A vs SSC-A scatter plot (debris gating view).
         
@@ -436,7 +437,7 @@ class FCSPlotter:
         data: pd.DataFrame,
         marker_channels: Optional[List[str]] = None,
         output_prefix: Optional[str] = None
-    ) -> List[plt.Figure]:
+    ) -> List[Figure]:
         """
         Create plots for fluorescence markers vs SSC.
         
@@ -502,7 +503,7 @@ class FCSPlotter:
         bins: int = 256,
         log_scale: bool = True,
         gate_thresholds: Optional[dict] = None
-    ) -> Optional[plt.Figure]:
+    ) -> Optional[Figure]:
         """
         Create multi-panel histogram plot for marker comparison.
         
@@ -541,11 +542,15 @@ class FCSPlotter:
         n_markers = len(marker_channels)
         
         # Create subplots
-        fig, axes = plt.subplots(1, n_markers, figsize=(5*n_markers, 5))
+        fig, axes_obj = plt.subplots(1, n_markers, figsize=(5*n_markers, 5))
         
-        # Handle single channel case
+        # Handle single channel case - convert to list of Axes
+        from matplotlib.axes import Axes
+        import numpy as np
         if n_markers == 1:
-            axes = [axes]
+            axes: list[Axes] = [axes_obj]  # type: ignore[list-item]
+        else:
+            axes: list[Axes] = list(np.ravel(axes_obj))  # type: ignore[arg-type]
         
         # Get sample ID
         sample_id = data['sample_id'].iloc[0] if 'sample_id' in data.columns and len(data) > 0 else 'Unknown' if 'sample_id' in data.columns else 'Unknown'
@@ -607,7 +612,7 @@ class FCSPlotter:
             ax.axvline(median_val, color='green', linestyle='--', linewidth=1, alpha=0.5)
             
             # Add stats text
-            stats_text = f'n={len(channel_data):,}\nμ={mean_val:.0f}\nM={median_val:.0f}'
+            stats_text = f'n={len(channel_data):,}\n�={mean_val:.0f}\nM={median_val:.0f}'
             ax.text(
                 0.02, 0.98,
                 stats_text,
@@ -640,7 +645,7 @@ class FCSPlotter:
         self,
         data: pd.DataFrame,
         output_file: Optional[Path] = None
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create 2x2 summary plot showing key scatter plots.
         
@@ -756,7 +761,7 @@ def generate_fcs_plots(parquet_file: Path, output_dir: Path = Path("figures/fcs"
     # Close all figures to free memory
     plt.close('all')
     
-    logger.success(f"✅ Plots generated for {sample_id}")
+    logger.success(f"? Plots generated for {sample_id}")
 
 
 def calculate_particle_size(
@@ -771,11 +776,11 @@ def calculate_particle_size(
     """
     Calculate particle size from FSC using rigorous Mie scattering theory.
     
-    ✅ UPDATED (Nov 18, 2025):
+    ? UPDATED (Nov 18, 2025):
     Now uses scientifically accurate Mie theory instead of simplified approximation.
     Implements FCMPASS-style calibration for production-quality sizing.
     
-    ⚠️ MEETING INSIGHT (Nov 18, 2025):
+    ?? MEETING INSIGHT (Nov 18, 2025):
     Parvesh explained that Size vs Intensity plots are what scientists use to:
     - Identify which particle sizes scatter which wavelengths
     - Look for clustering at specific size + intensity combinations
@@ -798,7 +803,7 @@ def calculate_particle_size(
     Performance:
         - With calibration: ~0.01ms per particle (lookup)
         - Without calibration: ~1ms per particle (optimization)
-        - 100× speedup when using calibration beads
+        - 100� speedup when using calibration beads
     
     Example:
         >>> # Use default calibration (recommended)
@@ -827,14 +832,14 @@ def calculate_particle_size(
     
     if not use_mie_theory:
         # Fallback to old simplified method
-        logger.warning("⚠️ Using simplified size approximation (use_mie_theory=False)")
+        logger.warning("?? Using simplified size approximation (use_mie_theory=False)")
         fsc_arr = np.asarray(fsc_values)
         fsc_norm = (fsc_arr - fsc_arr.min()) / (fsc_arr.max() - fsc_arr.min())
         df['particle_size_nm'] = 30 + (np.sqrt(fsc_norm) * 120)
         return df
     
     # Use Mie theory (RECOMMENDED)
-    logger.info(f"🔬 Calculating particle sizes using Mie theory (λ={wavelength_nm:.0f}nm)")
+    logger.info(f"?? Calculating particle sizes using Mie theory (?={wavelength_nm:.0f}nm)")
     
     # Set up calibration if provided, otherwise use default polystyrene beads
     if calibration_beads is None:
@@ -852,7 +857,7 @@ def calculate_particle_size(
         if fsc_p95 > 0:
             scale_factor = fsc_p95 / 80000  # Normalize to typical 95th percentile
             calibration_beads = {d: fsc * scale_factor for d, fsc in calibration_beads.items()}
-            logger.info(f"  Scaled calibration by {scale_factor:.2f}× based on 95th percentile FSC={fsc_p95:.0f}")
+            logger.info(f"  Scaled calibration by {scale_factor:.2f}� based on 95th percentile FSC={fsc_p95:.0f}")
     
     # Create and fit calibrator
     calibrator = FCMPASSCalibrator(
@@ -879,12 +884,12 @@ def calculate_particle_size(
         # Summary statistics
         pct_in_range = 100 * in_range.sum() / len(in_range)
         logger.info(
-            f"✅ Mie-based sizes calculated: {diameters.min():.1f}-{diameters.max():.1f} nm "
+            f"? Mie-based sizes calculated: {diameters.min():.1f}-{diameters.max():.1f} nm "
             f"({pct_in_range:.1f}% in calibrated range)"
         )
         
     except Exception as e:
-        logger.error(f"❌ Mie calibration failed: {e}")
+        logger.error(f"? Mie calibration failed: {e}")
         logger.warning("Falling back to direct Mie calculation (slower)")
         
         # Fallback: Use direct Mie calculator without calibration
@@ -902,7 +907,7 @@ def calculate_particle_size(
         df['particle_size_nm'] = diameters
         df['size_in_calibrated_range'] = True  # All are "valid" without calibration
         
-        logger.info(f"✅ Direct Mie sizes: {min(diameters):.1f}-{max(diameters):.1f} nm")
+        logger.info(f"? Direct Mie sizes: {min(diameters):.1f}-{max(diameters):.1f} nm")
     
     return df
 

@@ -207,7 +207,7 @@ class AutoAxisSelector:
                     # If two channels are highly correlated (r > 0.95),
                     # they contain the same information (redundant)
                     pair_corr = data_sample[[fl_ch1, fl_ch2]].corr(method='pearson')  # type: ignore[call-arg]
-                    corr = pair_corr.iloc[0, 1]
+                    corr = float(pair_corr.iloc[0, 1])
                     if abs(corr) < self.max_correlation_threshold:
                         score = self._calculate_pair_score(data_sample, fl_ch1, fl_ch2, channel_metrics)
                         if score > 0.3:
@@ -347,8 +347,8 @@ class AutoAxisSelector:
         
         # Component 2: Correlation score (lower correlation = higher score)
         pair_corr_matrix = pair_data.corr(method='pearson')  # type: ignore[call-arg]
-        correlation = abs(pair_corr_matrix.iloc[0, 1])
-        correlation_score = 1 - min(correlation, 1.0)
+        correlation = float(abs(pair_corr_matrix.iloc[0, 1]))
+        correlation_score = 1.0 - min(correlation, 1.0)
         
         # Component 3: Dynamic range score
         x_range = channel_metrics.get(x_channel, {}).get('range', 0)

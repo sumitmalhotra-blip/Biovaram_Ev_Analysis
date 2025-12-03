@@ -232,13 +232,13 @@ class AnomalyDetector:
                 continue
             
             # Calculate Z-scores
-            mean = np.mean(valid_data)
-            std = np.std(valid_data)
+            mean = float(np.mean(valid_data))
+            std = float(np.std(valid_data))
             
             if std == 0:
                 continue
             
-            z_scores = np.abs((channel_data - mean) / std)
+            z_scores = np.abs((channel_data.astype(float) - mean) / std)
             outliers = z_scores > threshold
             
             data_copy.loc[outliers, 'is_outlier'] = True

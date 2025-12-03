@@ -279,7 +279,10 @@ class DataIntegrator:
     
     def _load_fcs_statistics(self, parquet_dir: Path) -> pd.DataFrame:
         """Load FCS statistics from batch processing output."""
-        stats_file = parquet_dir / 'fcs_statistics.parquet'
+        # Check statistics subfolder first, then root folder
+        stats_file = parquet_dir / 'statistics' / 'fcs_statistics.parquet'
+        if not stats_file.exists():
+            stats_file = parquet_dir / 'fcs_statistics.parquet'
         
         if not stats_file.exists():
             raise FileNotFoundError(f"FCS statistics not found: {stats_file}")
@@ -288,7 +291,10 @@ class DataIntegrator:
     
     def _load_nta_statistics(self, parquet_dir: Path) -> pd.DataFrame:
         """Load NTA statistics from batch processing output."""
-        stats_file = parquet_dir / 'nta_statistics.parquet'
+        # Check statistics subfolder first, then root folder
+        stats_file = parquet_dir / 'statistics' / 'nta_statistics.parquet'
+        if not stats_file.exists():
+            stats_file = parquet_dir / 'nta_statistics.parquet'
         
         if not stats_file.exists():
             raise FileNotFoundError(f"NTA statistics not found: {stats_file}")

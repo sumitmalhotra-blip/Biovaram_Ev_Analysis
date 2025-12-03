@@ -1,10 +1,34 @@
 # CRMIT Development Plan: Backend Implementation
 ## Timeline: November 14, 2025 → January 15, 2026 (9 Weeks)
+## Extended: Phase 7 UI Enhancements (January 2025)
 
 **Developer**: Senior Python Full-Stack Developer  
 **Project**: CRMIT - Multi-Modal Laboratory Data Integration Platform  
 **Client**: Bio Varam (Biotechnology Research)  
-**Primary Deadline**: Mid-January 2026 (FCS + NTA parsing + Basic UI)
+**Primary Deadline**: Mid-January 2026 (FCS + NTA parsing + Basic UI)  
+**Extended Deadline**: Late January 2026 (UI Enhancements + Gap Closure)
+
+---
+
+## 🔍 GAP ANALYSIS UPDATE - January 2025
+
+**Status**: Gap analysis completed against Technical Requirements Document  
+**Reference**: `docs/planning/GAP_ANALYSIS.md`  
+**New Phase Added**: Phase 7 - UI Enhancements & Gap Closure
+
+### Summary of Identified Gaps
+
+| Gap | Priority | Effort | Status |
+|-----|----------|--------|--------|
+| FCS Best Practices Guide | HIGH | LOW | ❌ TODO |
+| Interactive Plotly Graphs | HIGH | MEDIUM | ❌ TODO |
+| Cross-Instrument Comparison | HIGH | MEDIUM | ❌ TODO |
+| Anomaly Detection UI | MEDIUM | LOW | ❌ TODO |
+| NTA Parameter Corrections | MEDIUM | MEDIUM | ❌ TODO |
+| Graph Annotation Tools | MEDIUM | HIGH | ⏳ DEFERRED |
+| Persistent Chat History | LOW | LOW | ❌ TODO |
+
+**Excludes**: TEM, Western Blot, AI Model (known pending)
 
 ---
 
@@ -3057,6 +3081,390 @@ if __name__ == "__main__":
 - ✅ Simple HTML frontend for testing
 - ✅ Integration with parsers and QC modules
 - ✅ Sample listing and details endpoints
+
+---
+
+## Phase 7: UI Enhancements & Gap Closure (Week 10-11)
+
+**Priority**: HIGH  
+**Duration**: 8-10 working days  
+**Goal**: Address identified gaps from Requirements Analysis
+
+**Reference**: See `docs/planning/GAP_ANALYSIS.md` for detailed gap analysis
+
+### 7.1 FCS Best Practices Guide (Day 46 - 0.5 day)
+
+**Files**: `apps/biovaram_streamlit/app.py`
+
+**Implementation**:
+```python
+# Add to Flow Cytometry tab (mirror NTA best practices pattern)
+with st.expander("📚 Flow Cytometry Best Practices", expanded=False):
+    st.markdown("""
+    ### 🎓 Best Practices for NanoFACS Analysis
+    
+    #### Sample Preparation
+    - **Dilution**: 1:100 to 1:1000 for concentrated samples
+    - **Temperature**: Record and maintain at 4°C or RT consistently
+    - **pH**: Maintain between 7.2-7.4 for most EV samples
+    
+    #### Acquisition Settings
+    - **FSC Threshold**: Set above noise floor (~200-500)
+    - **Flow Rate**: Low (10 µL/min) for better resolution
+    - **Events**: Collect minimum 10,000 events per sample
+    
+    #### Antibody Controls
+    - **Isotype Control**: Always run matched isotype
+    - **FMO Controls**: Fluorescence minus one for gating
+    - **Unstained**: Reference for autofluorescence
+    
+    #### Quality Checks
+    - **Water Wash**: Should have <100 events
+    - **Blank Media**: Background characterization
+    - **Reference Beads**: For daily calibration
+    """)
+```
+
+**Deliverable**: FCS Best Practices panel in Flow Cytometry tab
+
+### 7.2 Anomaly Detection UI (Days 46-47 - 1.5 days)
+
+**Files**: 
+- `src/visualization/anomaly_detection.py` (existing)
+- `apps/biovaram_streamlit/app.py` (update)
+
+**Implementation**:
+```python
+# Add toggle in visualization section
+detect_anomalies = st.checkbox("🔍 Detect Anomalies", value=False)
+
+if detect_anomalies:
+    from src.visualization.anomaly_detection import AnomalyDetector
+    detector = AnomalyDetector()
+    anomaly_mask = detector.detect_anomalies(data, method='isolation_forest')
+    
+    # Highlight anomalies in plot
+    fig.add_trace(go.Scatter(
+        x=data.loc[anomaly_mask, x_col],
+        y=data.loc[anomaly_mask, y_col],
+        mode='markers',
+        marker=dict(color='red', size=10, symbol='x'),
+        name='Anomalies'
+    ))
+    
+    st.info(f"Detected {anomaly_mask.sum()} anomalies ({anomaly_mask.mean()*100:.1f}%)")
+```
+
+**Deliverable**: Anomaly detection toggle with visual highlighting
+
+### 7.3 Interactive Plotly Graphs (Days 47-50 - 3 days)
+
+**Files**: 
+- `src/visualization/interactive_plots.py` (new)
+- `apps/biovaram_streamlit/app.py` (update)
+
+**Implementation**:
+```python
+# src/visualization/interactive_plots.py
+
+import plotly.express as px
+import plotly.graph_objects as go
+from typing import Optional, List
+import pandas as pd
+
+def create_interactive_scatter(
+    data: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    color_col: Optional[str] = None,
+    title: str = "Scatter Plot"
+) -> go.Figure:
+    """Create interactive scatter plot with hover details."""
+    
+    fig = px.scatter(
+        data,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        title=title,
+        hover_data=data.columns.tolist()[:5]  # Show first 5 columns on hover
+    )
+    
+    fig.update_layout(
+        hovermode='closest',
+        dragmode='zoom',  # Enable zoom by default
+        xaxis=dict(title=x_col),
+        yaxis=dict(title=y_col)
+    )
+    
+    # Add modebar for export options
+    fig.update_layout(
+        modebar_add=['drawline', 'drawrect', 'eraseshape']
+    )
+    
+    return fig
+
+def create_interactive_histogram(
+    data: pd.DataFrame,
+    col: str,
+    nbins: int = 50,
+    title: str = "Distribution"
+) -> go.Figure:
+    """Create interactive histogram with dynamic binning."""
+    
+    fig = px.histogram(
+        data,
+        x=col,
+        nbins=nbins,
+        title=title
+    )
+    
+    fig.update_layout(
+        bargap=0.1,
+        hovermode='x unified'
+    )
+    
+    return fig
+
+def create_size_distribution_overlay(
+    fcs_sizes: pd.Series,
+    nta_sizes: pd.Series,
+    title: str = "Size Distribution Comparison"
+) -> go.Figure:
+    """Create overlay of FCS and NTA size distributions."""
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Histogram(
+        x=fcs_sizes,
+        name='NanoFACS',
+        opacity=0.7,
+        marker_color='blue'
+    ))
+    
+    fig.add_trace(go.Histogram(
+        x=nta_sizes,
+        name='NTA',
+        opacity=0.7,
+        marker_color='green'
+    ))
+    
+    fig.update_layout(
+        barmode='overlay',
+        title=title,
+        xaxis_title='Particle Size (nm)',
+        yaxis_title='Count',
+        hovermode='x unified'
+    )
+    
+    return fig
+```
+
+**Deliverables**:
+- Interactive scatter plots with hover
+- Interactive histograms with dynamic binning
+- Overlay comparison plots
+- Export to PNG/SVG/PDF
+
+### 7.4 Cross-Instrument Comparison View (Days 50-52 - 2 days)
+
+**Files**: `apps/biovaram_streamlit/app.py`
+
+**Implementation**:
+```python
+# New tab: Comparison
+with tab_comparison:
+    st.header("🔬 Cross-Instrument Comparison")
+    
+    # Get matched samples from fusion module
+    from src.fusion.sample_matcher import SampleMatcher
+    matcher = SampleMatcher()
+    matched_samples = matcher.get_matched_samples()
+    
+    if matched_samples:
+        sample_id = st.selectbox("Select Sample", matched_samples)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("NanoFACS (Flow Cytometry)")
+            fcs_data = load_fcs_for_sample(sample_id)
+            st.plotly_chart(create_size_histogram(fcs_data))
+            
+            st.metric("Mean Size", f"{fcs_data['size'].mean():.1f} nm")
+            st.metric("Events", len(fcs_data))
+        
+        with col2:
+            st.subheader("NTA (ZetaView)")
+            nta_data = load_nta_for_sample(sample_id)
+            st.plotly_chart(create_size_histogram(nta_data))
+            
+            st.metric("Mean Size", f"{nta_data['size'].mean():.1f} nm")
+            st.metric("Concentration", f"{nta_data['concentration'].mean():.1e}")
+        
+        # Overlay comparison
+        st.subheader("📊 Overlay Comparison")
+        overlay_fig = create_size_distribution_overlay(
+            fcs_data['size'],
+            nta_data['size']
+        )
+        st.plotly_chart(overlay_fig, use_container_width=True)
+        
+        # Discrepancy analysis
+        size_diff_pct = abs(fcs_data['size'].mean() - nta_data['size'].mean()) / nta_data['size'].mean() * 100
+        if size_diff_pct > 15:
+            st.warning(f"⚠️ Size discrepancy: {size_diff_pct:.1f}% difference")
+        else:
+            st.success(f"✅ Size agreement: {size_diff_pct:.1f}% difference")
+    else:
+        st.info("No matched samples found. Upload both FCS and NTA data for the same samples.")
+```
+
+**Deliverables**:
+- Side-by-side FCS/NTA comparison
+- Overlay size distribution
+- Discrepancy highlighting
+- Statistical comparison
+
+### 7.5 NTA Parameter Corrections (Days 52-54 - 2 days)
+
+**Files**: 
+- `src/preprocessing/nta_corrections.py` (new)
+- `apps/biovaram_streamlit/app.py` (update)
+
+**Implementation**:
+```python
+# src/preprocessing/nta_corrections.py
+
+import numpy as np
+from scipy.constants import Boltzmann
+
+def calculate_water_viscosity(temp_celsius: float) -> float:
+    """
+    Calculate water viscosity at given temperature using empirical formula.
+    
+    Uses Vogel-Fulcher-Tammann equation.
+    Returns viscosity in Pa·s.
+    """
+    A = 2.414e-5  # Pa·s
+    B = 247.8     # K
+    C = 140       # K
+    
+    temp_kelvin = temp_celsius + 273.15
+    viscosity = A * 10**(B / (temp_kelvin - C))
+    
+    return viscosity
+
+def correct_nta_size(
+    raw_size_nm: float,
+    measurement_temp_c: float,
+    reference_temp_c: float = 25.0,
+    viscosity_pa_s: float = None
+) -> float:
+    """
+    Apply Stokes-Einstein correction to NTA size measurements.
+    
+    The diffusion coefficient D = kT / (3πηd)
+    
+    When temperature differs from reference, particle sizes need correction.
+    """
+    if viscosity_pa_s is None:
+        viscosity_meas = calculate_water_viscosity(measurement_temp_c)
+        viscosity_ref = calculate_water_viscosity(reference_temp_c)
+    else:
+        viscosity_meas = viscosity_pa_s
+        viscosity_ref = calculate_water_viscosity(reference_temp_c)
+    
+    # Temperature in Kelvin
+    T_meas = measurement_temp_c + 273.15
+    T_ref = reference_temp_c + 273.15
+    
+    # Correction factor: d_corrected = d_measured * (η_ref/η_meas) * (T_meas/T_ref)
+    correction = (viscosity_ref / viscosity_meas) * (T_meas / T_ref)
+    
+    return raw_size_nm * correction
+
+def batch_correct_sizes(
+    sizes: np.ndarray,
+    temp_c: float,
+    reference_temp_c: float = 25.0
+) -> np.ndarray:
+    """Batch correction for array of sizes."""
+    correction = get_correction_factor(temp_c, reference_temp_c)
+    return sizes * correction
+
+def get_correction_factor(temp_c: float, reference_temp_c: float = 25.0) -> float:
+    """Get the correction factor for a given temperature."""
+    viscosity_meas = calculate_water_viscosity(temp_c)
+    viscosity_ref = calculate_water_viscosity(reference_temp_c)
+    
+    T_meas = temp_c + 273.15
+    T_ref = reference_temp_c + 273.15
+    
+    return (viscosity_ref / viscosity_meas) * (T_meas / T_ref)
+```
+
+**Deliverables**:
+- Temperature-viscosity correction
+- Stokes-Einstein size adjustment
+- UI toggle for corrected vs raw values
+
+### 7.6 Persistent Chat History (Day 54-55 - 1 day)
+
+**Files**: 
+- `src/database/models.py` (update)
+- `apps/biovaram_streamlit/app.py` (update)
+
+**Implementation**:
+```python
+# Add to src/database/models.py
+
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String, index=True)
+    user_id = Column(String, index=True, nullable=True)
+    role = Column(String)  # 'user' or 'assistant'
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<ChatHistory {self.id}: {self.role}>"
+
+# Add to app.py
+def save_chat_message(session_id: str, role: str, content: str):
+    """Persist chat message to database."""
+    msg = ChatHistory(session_id=session_id, role=role, content=content)
+    db.add(msg)
+    db.commit()
+
+def load_chat_history(session_id: str) -> List[Dict]:
+    """Load chat history from database."""
+    messages = db.query(ChatHistory).filter_by(
+        session_id=session_id
+    ).order_by(ChatHistory.created_at).all()
+    
+    return [{"role": m.role, "content": m.content} for m in messages]
+```
+
+**Deliverables**:
+- ChatHistory database model
+- Session-based message persistence
+- Cross-session retrieval
+
+### Phase 7 Summary
+
+| Task | Days | Status | Priority |
+|------|------|--------|----------|
+| 7.1 FCS Best Practices | 0.5 | ❌ TODO | HIGH |
+| 7.2 Anomaly Detection UI | 1.5 | ❌ TODO | MEDIUM |
+| 7.3 Interactive Plotly | 3 | ❌ TODO | HIGH |
+| 7.4 Cross-Instrument Compare | 2 | ❌ TODO | HIGH |
+| 7.5 NTA Corrections | 2 | ❌ TODO | MEDIUM |
+| 7.6 Persistent Chat | 1 | ❌ TODO | LOW |
+
+**Total**: 10 working days
 
 ---
 

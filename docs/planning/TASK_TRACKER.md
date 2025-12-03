@@ -3,7 +3,23 @@
 **Project:** Extracellular Vesicle Analysis Platform  
 **Client:** Bio Varam via CRMIT  
 **Repository:** https://github.com/isumitmalhotra/CRMIT-Project-  
-**Last Updated:** November 28, 2025 @ 10:00
+**Last Updated:** January 2025 (Gap Analysis Update)
+
+---
+
+## 📊 QUICK STATUS SUMMARY
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 1: Data Parsing | ✅ COMPLETE | 100% |
+| Phase 2: Analysis & Viz | ✅ COMPLETE | 100% |
+| Phase 2.5: UI Enhancements | 🔄 IN PROGRESS | 70% |
+| Phase 3: AI/ML | ⏳ BLOCKED | 0% (Waiting for credentials) |
+
+**Active Focus:** UI Enhancement Gaps (see Gap Analysis section below)  
+**Latest Completed:** GAP-5 NTA Parameter Corrections (December 2025)  
+**13 Integration Tests:** ✅ All Passing  
+**Type Errors:** ✅ 0 in Production Code
 
 ---
 
@@ -96,6 +112,162 @@
 2. In sidebar, customize size ranges (or use presets)
 3. After analysis, see particle distribution cards
 4. View bar chart and detailed statistics
+
+---
+
+## 🔍 GAP ANALYSIS UPDATE - January 2025
+
+### 📋 Requirements vs Implementation Gap Analysis
+
+**Scope:** Identified missing features vs Technical Requirements Document  
+**Excludes:** TEM, Western Blot, AI Model (known pending)  
+**Reference:** `docs/planning/GAP_ANALYSIS.md` for full details
+
+### 🔴 HIGH PRIORITY GAPS (Must Complete)
+
+#### GAP-1: FCS Best Practices Guide ✅ COMPLETED
+- **Status:** ✅ COMPLETED (December 2, 2025)
+- **Requirement:** UI guide for FCS best practices (similar to existing NTA guide)
+- **Effort:** LOW (0.5 day)
+- **Files:** `apps/biovaram_streamlit/app.py`
+- **Implementation:**
+  - [x] Added FCS best practices expanders to Flow Cytometry tab
+  - [x] Sample Preparation guidelines (dilution, temp, pH, filtration)
+  - [x] Acquisition Settings (FSC threshold, flow rate, events, voltage)
+  - [x] Controls & Calibration (isotype, FMO, unstained, beads)
+  - [x] Common Issues & Troubleshooting section
+  - [x] Size Standards & Reference (EV size categories, RI values)
+
+#### GAP-2: Interactive Graphs (Plotly) ✅ COMPLETED
+- **Status:** ✅ COMPLETED (January 2025)
+- **Requirement:** Interactive visualizations with hover, zoom, export
+- **Effort:** MEDIUM (3-5 days)
+- **Files:** `src/visualization/interactive_plots.py` (537 lines), `apps/biovaram_streamlit/app.py`
+- **Implementation:**
+  - [x] Created `src/visualization/interactive_plots.py` module
+  - [x] Plotly scatter plots with hover templates
+  - [x] Plotly histograms with dynamic binning and stats lines
+  - [x] Theoretical vs Measured comparison plots
+  - [x] FSC vs SSC scatter with anomaly highlighting
+  - [x] Size vs Intensity scatter with anomaly highlighting
+  - [x] Multi-panel Analysis Dashboard (2x2 layout)
+  - [x] Sidebar toggle "Use Interactive Plotly Graphs"
+  - [x] Dark theme matching UI (#111827 background)
+  - [x] Export configuration (PNG/SVG at 2x scale)
+  - [x] Matplotlib fallback for static exports
+
+#### GAP-3: Cross-Instrument Comparison View ✅ COMPLETED
+- **Status:** ✅ COMPLETED (December 2025)
+- **Requirement:** Side-by-side view of same sample across FCS/NTA
+- **Effort:** MEDIUM (2-4 days)
+- **Files:** `src/visualization/cross_comparison.py` (775 lines), `apps/biovaram_streamlit/app.py`
+- **Implementation:**
+  - [x] Created `src/visualization/cross_comparison.py` module
+  - [x] Added "🔬 Cross-Comparison" tab to Streamlit navigation
+  - [x] Overlay size distribution histograms (FCS + NTA)
+  - [x] KDE comparison visualization
+  - [x] Statistical comparison table (D10, D50, D90, Mean, Std Dev)
+  - [x] Kolmogorov-Smirnov and Mann-Whitney U tests
+  - [x] Discrepancy bar chart with threshold highlighting
+  - [x] Export options (Comparison CSV, Size Data CSV, Markdown Report)
+
+### 🟡 MEDIUM PRIORITY GAPS
+
+#### GAP-4: Anomaly Detection UI Integration ✅ COMPLETED
+- **Status:** ✅ COMPLETED (December 2, 2025)
+- **Requirement:** Visual highlighting of anomalies in plots
+- **Effort:** LOW (1-2 days)
+- **Files:** `src/visualization/anomaly_detection.py`, `apps/biovaram_streamlit/app.py`
+- **Implementation:**
+  - [x] Added sidebar section "🔍 Anomaly Detection" with enable toggle
+  - [x] Method selection: Z-Score, IQR, or Both
+  - [x] Configurable thresholds (Z-Score: 2-5σ, IQR factor: 1-3x)
+  - [x] Anomaly statistics cards (count, percentage, normal events, method)
+  - [x] Red 'X' markers overlay on FSC vs SSC scatter plot
+  - [x] Red 'X' markers overlay on Diameter vs SSC scatter plot
+  - [x] Detailed breakdown expander with size statistics comparison
+  - [x] Export buttons: "Anomalies Only" and "All Data with Flags"
+  - [x] Interpretation messages based on anomaly rate
+
+#### GAP-5: NTA Parameter Corrections ✅ COMPLETED
+- **Status:** ✅ COMPLETED (December 2025)
+- **Requirement:** Viscosity/temperature corrections for NTA sizes
+- **Effort:** MEDIUM (2-3 days)
+- **Files:** `src/physics/nta_corrections.py` (679 lines), `apps/biovaram_streamlit/app.py`
+- **Implementation:**
+  - [x] Created `src/physics/nta_corrections.py` module
+  - [x] Stokes-Einstein viscosity-temperature correction function
+  - [x] Multi-media viscosity support (water, PBS, DMEM, FBS solutions)
+  - [x] Sidebar "🌡️ Temperature Correction" controls
+  - [x] Toggle enable/disable, temperature inputs, media selection
+  - [x] Real-time correction factor display with delta
+  - [x] Correction status badge on Key Metrics section
+  - [x] New "🌡️ Corrected View" visualization tab
+  - [x] Side-by-side raw vs corrected histograms
+  - [x] Detailed statistics comparison table with color-coded changes
+  - [x] Stokes-Einstein equation explanation with LaTeX
+  - [x] Reference tables (viscosity vs temp, correction factors)
+  - [x] Export includes corrected columns and metadata
+  - [ ] Apply correction to NTA size data
+  - [ ] Add UI toggle for corrected vs raw values
+
+#### GAP-6: Graph Annotation Tools
+- **Status:** ❌ NOT STARTED
+- **Requirement:** User annotations, region marking, notes on graphs
+- **Effort:** HIGH (5-7 days)
+- **Files:** `apps/biovaram_streamlit/app.py`, `src/database/models.py`
+- **Tasks:**
+  - [ ] Add Plotly drawing mode for annotations
+  - [ ] Implement ROI selection tool
+  - [ ] Create annotation storage model in database
+  - [ ] Enable annotation export with graphs
+
+### 🟢 LOW PRIORITY GAPS
+
+#### GAP-7: Persistent Chat History
+- **Status:** 🟡 PARTIAL (Session only, not database)
+- **Requirement:** Chat history stored and retrievable across sessions
+- **Effort:** LOW (1-2 days)
+- **Files:** `src/database/models.py`, `apps/biovaram_streamlit/app.py`
+- **Tasks:**
+  - [ ] Add ChatHistory model to database
+  - [ ] Implement save on message
+  - [ ] Load history on session start
+  - [ ] Add "Load Previous Session" option
+
+### 📊 Gap Implementation Schedule
+
+| Week | Gap ID | Task | Priority | Effort | Status |
+|------|--------|------|----------|--------|--------|
+| 1 | GAP-1 | FCS Best Practices | HIGH | LOW | ✅ DONE |
+| 1 | GAP-4 | Anomaly Detection UI | MEDIUM | LOW | ✅ DONE |
+| 1-2 | GAP-2 | Interactive Graphs | HIGH | MEDIUM | ✅ DONE |
+| 2 | GAP-3 | Cross-Instrument Compare | HIGH | MEDIUM | ❌ TODO |
+| 2-3 | GAP-5 | NTA Corrections | MEDIUM | MEDIUM | ❌ TODO |
+| 3 | GAP-7 | Persistent Chat | LOW | LOW | ❌ TODO |
+| 3-4 | GAP-6 | Graph Annotations | MEDIUM | HIGH | ❌ TODO |
+
+### ✅ FCS Experiment Parameters Popup - IMPLEMENTED (January 2025)
+
+**Implementation Details:**
+- Added to: `apps/biovaram_streamlit/app.py` (lines 2060-2280)
+- Trigger: Activates when FCS file is uploaded in Flow Cytometry tab
+
+**Features Implemented:**
+1. **Popup Dialog:**
+   - Temperature (°C) with 4-37°C range
+   - Substrate selection (Buffer, Media, PBS, DMEM, etc.)
+   - Sample Volume (µL)
+   - pH with 6.5-8.0 range
+
+2. **Validation:**
+   - All fields required before proceeding
+   - Range validation for Temperature and pH
+   - Session state storage for experiment params
+
+3. **API Integration:**
+   - `api_client.py` updated to send `experiment_params` to backend
+   - Parameters included in FCS upload request
 
 ---
 

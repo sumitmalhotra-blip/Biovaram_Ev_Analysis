@@ -33,6 +33,7 @@ from typing import Optional, List, Tuple, Dict, Any
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from pathlib import Path
 from loguru import logger
 
@@ -67,7 +68,7 @@ class SizeIntensityPlotter:
         output_file: Optional[Path] = None,
         plot_type: str = "density",
         highlight_expected: bool = True
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create Size vs Intensity scatter plot.
         
@@ -252,7 +253,7 @@ class SizeIntensityPlotter:
         intensity_channels: List[str],
         marker_names: List[str],
         output_file: Optional[Path] = None
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create multi-panel comparison of Size vs Intensity for multiple markers.
         
@@ -269,8 +270,10 @@ class SizeIntensityPlotter:
         n_cols = 2
         n_rows = (n_markers + 1) // 2
         
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 8 * n_rows))
-        axes = axes.flatten() if n_markers > 1 else [axes]
+        fig, axes_obj = plt.subplots(n_rows, n_cols, figsize=(16, 8 * n_rows))
+        from matplotlib.axes import Axes
+        import numpy as np
+        axes: list[Axes] = list(np.ravel(axes_obj)) if n_markers > 1 else [axes_obj]  # type: ignore[list-item]
         
         for i, (channel, marker) in enumerate(zip(intensity_channels, marker_names)):
             ax = axes[i]

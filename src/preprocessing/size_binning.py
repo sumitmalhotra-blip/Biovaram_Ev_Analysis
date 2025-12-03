@@ -385,10 +385,11 @@ class SizeBinning:
             logger.warning(f"Bin column '{bin_column}' not found")
             return pd.DataFrame()
         
-        # Aggregate statistics
-        agg_dict = {col: ['mean', 'median', 'std', 'count'] for col in value_columns}
+        # Aggregate statistics - use explicit list type for aggregation functions
+        agg_funcs: list[str] = ['mean', 'median', 'std', 'count']
+        agg_dict: dict[str, list[str]] = {col: agg_funcs for col in value_columns}
         
-        binned_stats = data.groupby(bin_column).agg(agg_dict)
+        binned_stats = data.groupby(bin_column).agg(agg_dict)  # type: ignore[arg-type]
         
         # Flatten multi-level column names
         binned_stats.columns = ['_'.join(col).strip() for col in binned_stats.columns.values]

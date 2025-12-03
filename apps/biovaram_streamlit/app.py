@@ -8,9 +8,79 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import base64
+import sys
+
+# Add src to path for anomaly detection import
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'src'))
 
 # Import API client
 from api_client import get_client, check_api_connection
+
+# Import Anomaly Detection (optional - graceful fallback)
+use_anomaly_detection = False
+try:
+    from visualization.anomaly_detection import AnomalyDetector
+    use_anomaly_detection = True
+except Exception:
+    use_anomaly_detection = False
+
+# Import Interactive Plots (optional - graceful fallback)
+use_interactive_plots = False
+try:
+    from visualization.interactive_plots import (
+        create_scatter_plot,
+        create_fsc_ssc_scatter,
+        create_size_vs_scatter_plot,
+        create_histogram,
+        create_size_distribution_histogram,
+        create_theoretical_vs_measured_plot,
+        create_analysis_dashboard,
+        get_export_config,
+        DARK_THEME,
+        # NTA-specific interactive plots
+        create_nta_size_distribution,
+        create_nta_concentration_profile,
+        create_theoretical_curve,
+        create_nta_raw_vs_corrected
+    )
+    use_interactive_plots = True
+except Exception as e:
+    use_interactive_plots = False
+
+# Import Cross-Comparison Visualization (optional - graceful fallback)
+use_cross_comparison = False
+try:
+    from visualization.cross_comparison import (
+        create_size_overlay_histogram,
+        create_kde_comparison,
+        create_correlation_scatter,
+        create_comparison_dashboard,
+        create_discrepancy_chart,
+        calculate_comparison_stats,
+        create_stats_table
+    )
+    use_cross_comparison = True
+except Exception as e:
+    use_cross_comparison = False
+
+# Import NTA Corrections Module (optional - graceful fallback)
+use_nta_corrections = False
+try:
+    from physics.nta_corrections import (
+        calculate_water_viscosity,
+        correct_nta_size,
+        get_correction_factor,
+        apply_corrections_to_dataframe,
+        get_viscosity_temperature_table,
+        get_correction_reference_table,
+        create_correction_summary,
+        get_media_viscosity,
+        REFERENCE_TEMPERATURE_C,
+        MEDIA_VISCOSITY_FACTORS
+    )
+    use_nta_corrections = True
+except Exception as e:
+    use_nta_corrections = False
 
 # Optional libraries
 use_pymiescatt = False
@@ -989,6 +1059,45 @@ section[data-testid="stSidebar"] > div {
     border-color: var(--primary-light);
 }
 
+/* ========== CUSTOM TAB BUTTONS ========== */
+/* Style the tab navigation buttons */
+div[data-testid="column"] > div > div > button[kind="primary"] {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 12px 20px !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    box-shadow: 0 4px 15px var(--primary-glow) !important;
+    position: relative !important;
+}
+
+div[data-testid="column"] > div > div > button[kind="primary"]::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary-light);
+}
+
+div[data-testid="column"] > div > div > button[kind="secondary"] {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    padding: 12px 20px !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+    transition: all var(--transition-normal) !important;
+}
+
+div[data-testid="column"] > div > div > button[kind="secondary"]:hover {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--primary) !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1592,15 +1701,42 @@ else:
     st.error("⚠️ Backend API not available. Please start the FastAPI server: `uvicorn src.api.main:app --reload`", icon="⚠️")
 
 # -------------------------
-# Tabs
+# Tabs with Persistent State
 # -------------------------
-tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "🧪 Flow Cytometry", "⚛ Nanoparticle Tracking"])
+# Initialize active tab in session state if not exists
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "📊 Dashboard"
+
+# Tab names for consistency
+TAB_NAMES = ["📊 Dashboard", "🧪 Flow Cytometry", "⚛ Nanoparticle Tracking", "🔬 Cross-Comparison"]
+
+# Function to handle tab change
+def change_tab(tab_name: str):
+    """Change the active tab and trigger rerun."""
+    st.session_state.active_tab = tab_name
+
+# Create custom tab-like navigation using columns and buttons
+tab_cols = st.columns(len(TAB_NAMES))
+for i, tab_name in enumerate(TAB_NAMES):
+    with tab_cols[i]:
+        is_active = st.session_state.active_tab == tab_name
+        button_style = "primary" if is_active else "secondary"
+        if st.button(
+            tab_name,
+            key=f"tab_btn_{i}",
+            use_container_width=True,
+            type=button_style
+        ):
+            st.session_state.active_tab = tab_name
+            st.rerun()
+
+st.markdown("---")
 
 
 # -------------------------
 # TAB 1: Dashboard + Upload + Chatbot
 # -------------------------
-with tab1:
+if st.session_state.active_tab == "📊 Dashboard":
     with st.sidebar:
         st.markdown('<div class="section-header"><div class="section-icon">🧪</div><h3>Sample Database</h3></div>', unsafe_allow_html=True)
         
@@ -1959,7 +2095,7 @@ with tab1:
 # -------------------------
 # TAB 2: Particle Size Analysis
 # -------------------------
-with tab2:
+if st.session_state.active_tab == "🧪 Flow Cytometry":
     with st.sidebar:
         st.markdown('<div class="section-header"><div class="section-icon">⚙️</div><h3>Analysis Settings</h3></div>', unsafe_allow_html=True)
         lambda_nm = st.number_input("Laser wavelength (nm)", value=488.0, step=1.0)
@@ -2051,6 +2187,83 @@ with tab2:
         st.caption("Select columns after uploading the file.")
         ignore_negative = st.checkbox("Ignore negative -H values (replace with NaN)", value=True)
         drop_na = st.checkbox("Drop rows missing FSC/SSC after cleaning", value=True)
+        
+        # =========================================================================
+        # ANOMALY DETECTION SETTINGS
+        # =========================================================================
+        st.markdown("---")
+        st.markdown("**🔍 Anomaly Detection**")
+        # Initialize default values for anomaly detection parameters
+        anomaly_method = "Z-Score"
+        zscore_threshold = 3.0
+        iqr_factor = 1.5
+        highlight_anomalies = False
+        
+        if use_anomaly_detection:
+            enable_anomaly_detection = st.checkbox(
+                "Enable Anomaly Detection", 
+                value=False,
+                help="Detect outliers and anomalies in your data using statistical methods"
+            )
+            
+            if enable_anomaly_detection:
+                anomaly_method = st.selectbox(
+                    "Detection Method",
+                    ["Z-Score", "IQR", "Both"],
+                    index=0,
+                    help="Z-Score: Statistical outliers (3σ). IQR: Interquartile range method."
+                )
+                
+                if anomaly_method in ["Z-Score", "Both"]:
+                    zscore_threshold = st.slider(
+                        "Z-Score Threshold (σ)",
+                        min_value=2.0,
+                        max_value=5.0,
+                        value=3.0,
+                        step=0.5,
+                        help="Events beyond this many standard deviations are flagged as anomalies"
+                    )
+                else:
+                    zscore_threshold = 3.0
+                
+                if anomaly_method in ["IQR", "Both"]:
+                    iqr_factor = st.slider(
+                        "IQR Factor",
+                        min_value=1.0,
+                        max_value=3.0,
+                        value=1.5,
+                        step=0.25,
+                        help="Multiplier for IQR-based outlier detection"
+                    )
+                else:
+                    iqr_factor = 1.5
+                
+                highlight_anomalies = st.checkbox(
+                    "Highlight anomalies on scatter plots",
+                    value=True,
+                    help="Show anomalies as red markers on plots"
+                )
+        else:
+            st.warning("Anomaly detection module not available")
+            enable_anomaly_detection = False
+        
+        # =========================================================================
+        # INTERACTIVE PLOTS SETTINGS
+        # =========================================================================
+        st.markdown("---")
+        st.markdown("**📊 Visualization Settings**")
+        if use_interactive_plots:
+            use_plotly = st.checkbox(
+                "Use Interactive Plots (Plotly)", 
+                value=True,
+                help="Enable interactive graphs with hover, zoom, and pan. Disable for static matplotlib plots."
+            )
+            if use_plotly:
+                st.caption("✨ Hover over points for details, zoom with scroll, pan by dragging")
+        else:
+            st.warning("Interactive plots not available - using static matplotlib")
+            use_plotly = False
+        
         st.markdown("---")
         if use_pymiescatt:
             st.success("PyMieScatt detected - full Mie used")
@@ -2062,12 +2275,323 @@ with tab2:
 
     file2 = st.file_uploader("Upload dataset for analysis", type=["csv", "xlsx", "json", "fcs", "parquet"], key="analysis_upload")
 
+    # =========================================================================
+    # FCS BEST PRACTICES GUIDE - Flow Cytometry Tab
+    # Mirrors NTA best practices pattern for consistency
+    # =========================================================================
+    if file2:
+        st.markdown(
+            "<div class='animated-section'>"
+            "<h4 style='color:#00b4d8;'>🔼 🧠 Flow Cytometry Best Practices</h4>"
+            "</div>",
+            unsafe_allow_html=True
+        )
+
+        with st.expander("🧪 Sample Preparation", expanded=False):
+            st.markdown(
+                """
+                <ul style="line-height:1.8;">
+                    <li><b>Dilution:</b> Use <b>1:100 to 1:1000</b> for concentrated samples to avoid swarm detection.</li>
+                    <li><b>Temperature:</b> Record and maintain at <b>4°C or RT</b> consistently throughout analysis.</li>
+                    <li><b>pH:</b> Maintain between <b>7.2-7.4</b> for most EV samples (PBS buffer recommended).</li>
+                    <li><b>Filtration:</b> Filter samples through <b>0.22 μm filter</b> to remove aggregates.</li>
+                    <li><b>Fresh Samples:</b> Analyze within <b>4 hours</b> of preparation for best results.</li>
+                </ul>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with st.expander("⚙️ Acquisition Settings", expanded=False):
+            st.markdown(
+                """
+                <ul style="line-height:1.8;">
+                    <li><b>FSC Threshold:</b> Set above noise floor at approximately <b>200-500</b>.</li>
+                    <li><b>Flow Rate:</b> Use <b>Low (10 μL/min)</b> for better resolution of small particles.</li>
+                    <li><b>Events:</b> Collect minimum <b>10,000 events</b> per sample for statistical validity.</li>
+                    <li><b>Time:</b> Acquire for <b>60-120 seconds</b> to ensure representative sampling.</li>
+                    <li><b>Voltage Settings:</b> Optimize PMT voltages using reference beads first.</li>
+                </ul>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with st.expander("🔬 Controls & Calibration", expanded=False):
+            st.markdown(
+                """
+                <ul style="line-height:1.8;">
+                    <li><b>Isotype Control:</b> Always run <b>matched isotype</b> at same concentration as test antibody.</li>
+                    <li><b>FMO Controls:</b> Use <b>Fluorescence Minus One</b> controls for accurate gating.</li>
+                    <li><b>Unstained Sample:</b> Run for <b>autofluorescence</b> baseline reference.</li>
+                    <li><b>Reference Beads:</b> Run <b>polystyrene calibration beads</b> (100-500nm) daily.</li>
+                    <li><b>Water Wash:</b> Should show <b>&lt;100 events</b> if system is clean.</li>
+                    <li><b>Blank Media:</b> Characterize background from buffer/media alone.</li>
+                </ul>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with st.expander("⚠️ Common Issues & Troubleshooting", expanded=False):
+            st.markdown(
+                """
+                <ul style="line-height:1.8;">
+                    <li><b>Swarm Detection:</b> If events cluster abnormally, <b>dilute sample further</b>.</li>
+                    <li><b>High Background:</b> Check <b>laser alignment</b> and <b>clean flow cell</b> with bleach.</li>
+                    <li><b>Aggregates:</b> Filter through <b>0.22 μm</b> or sonicate briefly (30 sec, low power).</li>
+                    <li><b>Inconsistent Counts:</b> Verify <b>stable flow rate</b> - check for air bubbles.</li>
+                    <li><b>Dim Signals:</b> Increase PMT voltage or check <b>antibody concentration</b>.</li>
+                    <li><b>Carryover:</b> Run <b>3 water washes</b> between different samples.</li>
+                </ul>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with st.expander("📏 Size Standards & Reference", expanded=False):
+            st.markdown(
+                """
+                <ul style="line-height:1.8;">
+                    <li><b>Polystyrene Beads:</b> Use 100nm, 200nm, 500nm beads for size calibration.</li>
+                    <li><b>Silica Beads:</b> Better refractive index match for biological vesicles.</li>
+                    <li><b>Expected EV Sizes:</b>
+                        <ul>
+                            <li>🔹 <b>Exosomes:</b> 30-150 nm</li>
+                            <li>🔹 <b>Microvesicles:</b> 100-1000 nm</li>
+                            <li>🔹 <b>Apoptotic Bodies:</b> 500-5000 nm</li>
+                        </ul>
+                    </li>
+                    <li><b>Refractive Index:</b> EVs typically have RI of <b>1.37-1.42</b> (lipid bilayer).</li>
+                </ul>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.success("📁 File uploaded successfully! Complete experiment parameters below.")
+    else:
+        st.info("📤 Upload an FCS/data file to view Flow Cytometry best practices.")
+
     if "fsc_col_selected" not in st.session_state:
         st.session_state["fsc_col_selected"] = None
     if "ssc_col_selected" not in st.session_state:
         st.session_state["ssc_col_selected"] = None
     if "analysis_df" not in st.session_state:
         st.session_state["analysis_df"] = None
+    
+    # =========================================================================
+    # EXPERIMENT PARAMETERS POPUP - Flow Cytometry Tab
+    # Captures: Temperature, Substrate, Volume, pH
+    # These parameters are NOT in FCS metadata, so we need user input.
+    # This data will be used for AI-based best practices comparison (future)
+    # =========================================================================
+    if "fcs_experiment_params" not in st.session_state:
+        st.session_state["fcs_experiment_params"] = {}
+    if "fcs_params_submitted" not in st.session_state:
+        st.session_state["fcs_params_submitted"] = False
+    
+    # Detect new file upload - reset experiment params form
+    if file2:
+        current_file_name = getattr(file2, 'name', str(file2))
+        if st.session_state.get("fcs_last_uploaded_file") != current_file_name:
+            st.session_state["fcs_last_uploaded_file"] = current_file_name
+            st.session_state["fcs_params_submitted"] = False
+            st.session_state["fcs_experiment_params"] = {}
+        
+        # Show experiment parameters form if not yet submitted
+        if not st.session_state.get("fcs_params_submitted", False):
+            st.markdown("""
+            <div class="glass-card" style="border: 2px solid #00b4d8; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 28px;">🧪</div>
+                    <div>
+                        <h4 style="margin: 0; color: #f8fafc;">Experiment Parameters Required</h4>
+                        <p style="margin: 0; color: #94a3b8; font-size: 13px;">
+                            FCS files don't contain these parameters. Please enter them for analysis.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            with st.form("fcs_experiment_params_form", clear_on_submit=False):
+                st.markdown("#### 🌡️ Experimental Conditions")
+                st.caption("These parameters are essential for AI-based best practices comparison.")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    exp_temperature = st.number_input(
+                        "🌡️ Temperature (°C) *",
+                        min_value=-20.0,
+                        max_value=100.0,
+                        value=st.session_state.get("exp_temperature", 25.0),
+                        step=0.5,
+                        help="Sample temperature during measurement (typical: 4°C for storage, 20-25°C for room temp)"
+                    )
+                    
+                    exp_substrate = st.selectbox(
+                        "🧫 Substrate/Buffer *",
+                        options=[
+                            "",
+                            "PBS (pH 7.4)",
+                            "HEPES Buffer",
+                            "Tris-HCl Buffer",
+                            "Cell Culture Media (DMEM)",
+                            "Cell Culture Media (RPMI)",
+                            "Saline (0.9% NaCl)",
+                            "HPLC Grade Water",
+                            "Other"
+                        ],
+                        index=0,
+                        help="Buffer or substrate used for sample preparation"
+                    )
+                    
+                    if exp_substrate == "Other":
+                        exp_substrate_other = st.text_input(
+                            "Specify Substrate",
+                            placeholder="Enter custom substrate name"
+                        )
+                
+                with col2:
+                    exp_volume = st.number_input(
+                        "💧 Sample Volume (μL) *",
+                        min_value=0.0,
+                        max_value=10000.0,
+                        value=st.session_state.get("exp_volume", 50.0),
+                        step=5.0,
+                        help="Volume of sample loaded for analysis (typical: 20-100 μL)"
+                    )
+                    
+                    exp_ph = st.number_input(
+                        "🧪 pH *",
+                        min_value=0.0,
+                        max_value=14.0,
+                        value=st.session_state.get("exp_ph", 7.4),
+                        step=0.1,
+                        help="pH of the sample/buffer (physiological: 7.35-7.45)"
+                    )
+                
+                st.markdown("---")
+                st.markdown("#### 📋 Additional Information (Optional)")
+                
+                col3, col4 = st.columns(2)
+                with col3:
+                    exp_incubation_time = st.number_input(
+                        "⏱️ Incubation Time (min)",
+                        min_value=0,
+                        max_value=1440,
+                        value=st.session_state.get("exp_incubation_time", 0),
+                        step=5,
+                        help="Time sample was incubated before measurement"
+                    )
+                    
+                    exp_staining_protocol = st.selectbox(
+                        "🎨 Staining Protocol",
+                        options=["", "Direct Staining", "Indirect Staining", "Intracellular Staining", "Surface Staining", "None"],
+                        index=0,
+                        help="Type of staining protocol used"
+                    )
+                
+                with col4:
+                    exp_dilution_factor = st.text_input(
+                        "🔬 Dilution Factor",
+                        value=st.session_state.get("exp_dilution_factor", ""),
+                        placeholder="e.g., 1:100, 1:1000",
+                        help="Dilution ratio if sample was diluted"
+                    )
+                    
+                    exp_instrument_settings = st.text_area(
+                        "⚙️ Special Instrument Settings",
+                        value=st.session_state.get("exp_instrument_settings", ""),
+                        placeholder="e.g., Flow rate: Medium, Threshold: 200",
+                        height=68,
+                        help="Any non-standard instrument settings used"
+                    )
+                
+                exp_notes = st.text_area(
+                    "📝 Experiment Notes",
+                    value=st.session_state.get("exp_notes", ""),
+                    placeholder="Any additional observations or notes about this experiment...",
+                    height=80
+                )
+                
+                submit_params = st.form_submit_button("✅ Save Experiment Parameters & Continue", use_container_width=True)
+                
+                if submit_params:
+                    # Validation
+                    errors = []
+                    if not exp_substrate:
+                        errors.append("❌ Substrate/Buffer is required")
+                    if exp_volume <= 0:
+                        errors.append("❌ Volume must be greater than 0")
+                    if exp_ph < 0 or exp_ph > 14:
+                        errors.append("❌ pH must be between 0 and 14")
+                    
+                    if errors:
+                        for error in errors:
+                            st.error(error)
+                    else:
+                        # Store experiment parameters
+                        substrate_final = exp_substrate_other if exp_substrate == "Other" and 'exp_substrate_other' in dir() else exp_substrate
+                        
+                        st.session_state["fcs_experiment_params"] = {
+                            "temperature_celsius": exp_temperature,
+                            "substrate": substrate_final,
+                            "volume_ul": exp_volume,
+                            "ph": exp_ph,
+                            "incubation_time_min": exp_incubation_time,
+                            "staining_protocol": exp_staining_protocol,
+                            "dilution_factor": exp_dilution_factor,
+                            "instrument_settings": exp_instrument_settings,
+                            "notes": exp_notes,
+                            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        st.session_state["fcs_params_submitted"] = True
+                        st.success("✅ Experiment parameters saved! Proceeding with analysis...")
+                        st.rerun()
+            
+            # Show info about why these parameters matter
+            with st.expander("ℹ️ Why are these parameters important?", expanded=False):
+                st.markdown("""
+                **These experimental parameters are crucial for:**
+                
+                🔬 **Quality Control**
+                - Temperature affects EV stability and aggregation
+                - pH influences surface marker binding efficiency
+                - Volume determines event concentration and statistics
+                
+                🤖 **Future AI Analysis**
+                - Compare your parameters with best practices
+                - Detect potential issues (e.g., pH too low for antibody binding)
+                - Recommend optimal conditions for your sample type
+                
+                📊 **Reproducibility**
+                - Track experimental conditions across runs
+                - Identify batch-to-batch variations
+                - Enable meta-analysis of multiple experiments
+                
+                *Note: NTA files typically contain this information in metadata, but FCS files do not.*
+                """)
+            
+            # Stop here until parameters are submitted
+            st.info("👆 Please fill in the experiment parameters above to continue with the analysis.")
+            st.stop()
+        
+        else:
+            # Show saved parameters in a compact summary
+            params = st.session_state.get("fcs_experiment_params", {})
+            if params:
+                with st.expander("📋 Experiment Parameters (saved)", expanded=False):
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("🌡️ Temperature", f"{params.get('temperature_celsius', 'N/A')}°C")
+                    with col2:
+                        st.metric("🧫 Substrate", params.get('substrate', 'N/A')[:15] + "..." if len(str(params.get('substrate', ''))) > 15 else params.get('substrate', 'N/A'))
+                    with col3:
+                        st.metric("💧 Volume", f"{params.get('volume_ul', 'N/A')} μL")
+                    with col4:
+                        st.metric("🧪 pH", params.get('ph', 'N/A'))
+                    
+                    if st.button("🔄 Edit Parameters", key="edit_fcs_params"):
+                        st.session_state["fcs_params_submitted"] = False
+                        st.rerun()
 
     if file2:
         # Option to upload via API
@@ -2115,6 +2639,8 @@ with tab2:
                                 file_ext = str(file2.name).lower().split('.')[-1]  # type: ignore[union-attr]
                                 
                                 if file_ext == 'fcs':
+                                    # Include experiment parameters from the popup form
+                                    exp_params = st.session_state.get("fcs_experiment_params", {})
                                     response = client.upload_fcs(
                                         file_path=temp_path,
                                         sample_id=tab2_sample_id,
@@ -2122,7 +2648,8 @@ with tab2:
                                         concentration_ug=tab2_concentration,
                                         preparation_method=tab2_method,
                                         operator=st.session_state.get("operator", ""),
-                                        notes=f"Tab 2 Analysis - {lambda_nm}nm laser"
+                                        notes=f"Tab 2 Analysis - {lambda_nm}nm laser",
+                                        experiment_params=exp_params  # NEW: Include experiment parameters
                                     )
                                 else:
                                     response = client.upload_nta(
@@ -2206,13 +2733,80 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
+    # =========================================================================
+    # LIVE THEORETICAL CURVE PREVIEW (in collapsible expander)
+    # Updates in real-time as user adjusts sidebar parameters
+    # Only shown as a reference - NOT actual data
+    # =========================================================================
+    with st.expander("📐 Preview Theoretical Model (No Data Required)", expanded=False):
+        st.warning("⚠️ **This is NOT experimental data!** This is a mathematical model (Mie Scattering Theory) showing the expected FSC/SSC ratio for different particle sizes based on your sidebar settings. Upload a file and run analysis to see your actual data.")
+        
+        st.markdown("#### Theoretical FSC/SSC Ratio Curve")
+        st.caption("Adjust sidebar parameters to see how the theoretical curve changes. This helps you understand the physics before analyzing real data.")
+        
+        # Build theoretical lookup with current settings
+        preview_diameters = np.linspace(int(d_min), int(d_max), int(n_points))
+        _, preview_ratios = build_theoretical_lookup(lambda_nm, n_particle, n_medium, fsc_range, ssc_range, preview_diameters)
+        
+        # Get Plotly config for export buttons
+        plotly_config = get_export_config() if use_interactive_plots else {}
+        
+        # Use interactive Plotly if available
+        if use_interactive_plots:
+            fig_preview = create_theoretical_curve(
+                preview_diameters,
+                preview_ratios,
+                title="Theoretical FSC/SSC Ratio Curve (Mie Scattering Model)"
+            )
+            st.plotly_chart(fig_preview, use_container_width=True, config=plotly_config)
+        else:
+            # Fallback to matplotlib
+            fig_preview_mpl, ax_preview = plt.subplots(figsize=(10, 4))
+            fig_preview_mpl.patch.set_facecolor('#111827')
+            ax_preview.set_facecolor('#111827')
+            ax_preview.plot(preview_diameters, preview_ratios, color='#f72585', linewidth=2.5)
+            ax_preview.set_xlabel("Diameter (nm)", color='#f8fafc', fontsize=12)
+            ax_preview.set_ylabel("FSC/SSC Ratio", color='#f8fafc', fontsize=12)
+            ax_preview.set_title("Theoretical FSC/SSC Ratio Curve (Mie Scattering Model)", color='#f8fafc', fontsize=14, fontweight='bold')
+            ax_preview.tick_params(colors='#94a3b8')
+            for spine in ax_preview.spines.values():
+                spine.set_color('#374151')
+            ax_preview.grid(True, alpha=0.2, color='#374151')
+            st.pyplot(fig_preview_mpl)
+            plt.close()
+        
+        # Show current parameter summary
+        st.markdown("**Current Model Parameters:**")
+        param_cols = st.columns(5)
+        param_cols[0].metric("Wavelength", f"{lambda_nm:.0f} nm")
+        param_cols[1].metric("n (particle)", f"{n_particle:.2f}")
+        param_cols[2].metric("n (medium)", f"{n_medium:.2f}")
+        param_cols[3].metric("Size Range", f"{d_min}-{d_max} nm")
+        param_cols[4].metric("Resolution", f"{n_points} pts")
+
     st.markdown("---")
-    run_col1, run_col2 = st.columns([1, 3])
+    run_col1, run_col2, run_col3 = st.columns([1, 2, 1])
     with run_col1:
         run_analysis = st.button("Run Analysis", key="run_analysis", use_container_width=True)
     with run_col2:
         st.write("")
+    with run_col3:
+        # Reset Tab button - clears cached analysis results
+        if st.button("🔄 Reset Tab", key="reset_fcs_tab", use_container_width=True, help="Clear cached analysis and start fresh"):
+            keys_to_clear = [
+                'fcs_analysis_complete', 'fcs_results_df', 'fcs_diameters', 
+                'fcs_theoretical_ratios', 'fcs_analysis_params', 'fcs_anomaly_results',
+                'fcs_anomaly_mask', 'analysis_df', 'fcs_col_selected', 'ssc_col_selected'
+            ]
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.success("Tab reset! Upload a new file or re-run analysis.")
+            st.rerun()
 
+    # Check if we have cached analysis results to display
+    has_cached_results = st.session_state.get('fcs_analysis_complete', False)
+    
     if run_analysis:
         if st.session_state.get("analysis_df") is None:
             st.error("No file applied. Upload file and click 'Apply Selection' first.")
@@ -2406,99 +3000,681 @@ with tab2:
                     csv_bytes = csv_buffer.getvalue().encode()
                     st.download_button("Download Results CSV", data=csv_bytes, file_name="estimated_sizes.csv", mime="text/csv")
 
-                    # Plots with dark theme
-                    plt.style.use('dark_background')
-
                     measured = df.dropna(subset=["estimated_diameter_nm", "measured_ratio"])
 
-                    # Plot 1: Theoretical vs Measured
-                    fig1, ax1 = plt.subplots(figsize=(10, 5))
-                    fig1.patch.set_facecolor('#111827')
-                    ax1.set_facecolor('#111827')
-                    ax1.plot(diameters, theoretical_ratios, color='#00b4d8', linewidth=2, label="Theoretical ratio")
-                    if not measured.empty:
-                        ax1.scatter(measured["estimated_diameter_nm"], measured["measured_ratio"], s=20, alpha=0.6, c='#f72585', label="Measured events")
-                    ax1.set_xlabel("Diameter (nm)", color='#f8fafc', fontsize=12)
-                    ax1.set_ylabel("FSC/SSC ratio", color='#f8fafc', fontsize=12)
-                    ax1.legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc')
-                    ax1.tick_params(colors='#94a3b8')
-                    for spine in ax1.spines.values():
-                        spine.set_color('#374151')
-                    ax1.grid(True, alpha=0.2, color='#374151')
-                    st.pyplot(fig1)
-                    plt.close()
+                    # =========================================================================
+                    # VISUALIZATION SECTION - Interactive (Plotly) or Static (Matplotlib)
+                    # =========================================================================
+                    
+                    # Get Plotly export config (used throughout)
+                    plotly_config = get_export_config() if use_interactive_plots else {}
+                    
+                    if use_plotly and use_interactive_plots:
+                        # =====================================================================
+                        # PLOTLY INTERACTIVE PLOTS
+                        # =====================================================================
+                        st.markdown("---")
+                        st.markdown("### 📊 Interactive Visualizations")
+                        st.caption("💡 Tip: Hover for details • Scroll to zoom • Drag to pan • Double-click to reset")
+                        
+                        # Plot 1: Theoretical vs Measured (Plotly)
+                        fig1_plotly = create_theoretical_vs_measured_plot(
+                            diameters=diameters,
+                            theoretical_ratios=theoretical_ratios,
+                            measured_data=measured,
+                            diameter_col="estimated_diameter_nm",
+                            ratio_col="measured_ratio",
+                            title="Theoretical vs Measured FSC/SSC Ratio"
+                        )
+                        st.plotly_chart(fig1_plotly, use_container_width=True, config=plotly_config)
+                        
+                        # Plot 2: Size Distribution Histogram (Plotly)
+                        size_ranges_for_plot = st.session_state.get("custom_size_ranges", None)
+                        fig2_plotly = create_size_distribution_histogram(
+                            data=df,
+                            size_col="estimated_diameter_nm",
+                            nbins=50,
+                            title="Particle Size Distribution",
+                            show_size_ranges=bool(size_ranges_for_plot),
+                            size_ranges=size_ranges_for_plot
+                        )
+                        st.plotly_chart(fig2_plotly, use_container_width=True, config=plotly_config)
+                        
+                        # Save static version for export (optional - requires kaleido)
+                        try:
+                            plot_path = os.path.join("images", "particle_size_histogram.png")
+                            fig2_plotly.write_image(plot_path, width=1200, height=600, scale=2)
+                        except (ValueError, ImportError):
+                            pass  # Kaleido not installed - skip image export
+                        
+                    else:
+                        # =====================================================================
+                        # MATPLOTLIB STATIC PLOTS (Fallback)
+                        # =====================================================================
+                        plt.style.use('dark_background')
+                        
+                        # Plot 1: Theoretical vs Measured
+                        fig1, ax1 = plt.subplots(figsize=(10, 5))
+                        fig1.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                        ax1.set_facecolor('#111827')
+                        ax1.plot(diameters, theoretical_ratios, color='#00b4d8', linewidth=2, label="Theoretical ratio")
+                        if not measured.empty:
+                            ax1.scatter(measured["estimated_diameter_nm"], measured["measured_ratio"], s=20, alpha=0.6, c='#f72585', label="Measured events")
+                        ax1.set_xlabel("Diameter (nm)", color='#f8fafc', fontsize=12)
+                        ax1.set_ylabel("FSC/SSC ratio", color='#f8fafc', fontsize=12)
+                        ax1.legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc')
+                        ax1.tick_params(colors='#94a3b8')
+                        for spine in ax1.spines.values():
+                            spine.set_color('#374151')
+                        ax1.grid(True, alpha=0.2, color='#374151')
+                        st.pyplot(fig1)
+                        plt.close()
 
-                    # Plot 2: Histogram
-                    fig2, ax2 = plt.subplots(figsize=(10, 5))
-                    fig2.patch.set_facecolor('#111827')
-                    ax2.set_facecolor('#111827')
-                    ax2.hist(measured["estimated_diameter_nm"].dropna(), bins=40, color='#00b4d8', edgecolor='#0096c7', alpha=0.85)
-                    ax2.set_xlabel("Estimated diameter (nm)", color='#f8fafc', fontsize=12)
-                    ax2.set_ylabel("Counts", color='#f8fafc', fontsize=12)
-                    ax2.set_title("Particle Size Distribution", color='#f8fafc', fontsize=14, fontweight='bold')
-                    ax2.tick_params(colors='#94a3b8')
-                    for spine in ax2.spines.values():
-                        spine.set_color('#374151')
-                    ax2.grid(True, alpha=0.2, color='#374151')
+                        # Plot 2: Histogram
+                        fig2, ax2 = plt.subplots(figsize=(10, 5))
+                        fig2.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                        ax2.set_facecolor('#111827')
+                        ax2.hist(measured["estimated_diameter_nm"].dropna(), bins=40, color='#00b4d8', edgecolor='#0096c7', alpha=0.85)
+                        ax2.set_xlabel("Estimated diameter (nm)", color='#f8fafc', fontsize=12)
+                        ax2.set_ylabel("Counts", color='#f8fafc', fontsize=12)
+                        ax2.set_title("Particle Size Distribution", color='#f8fafc', fontsize=14, fontweight='bold')
+                        ax2.tick_params(colors='#94a3b8')
+                        for spine in ax2.spines.values():
+                            spine.set_color('#374151')
+                        ax2.grid(True, alpha=0.2, color='#374151')
 
-                    plot_path = os.path.join("images", "particle_size_histogram.png")
-                    fig2.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='#111827')
-                    st.pyplot(fig2)
-                    plt.close()
+                        plot_path = os.path.join("images", "particle_size_histogram.png")
+                        fig2.savefig(plot_path, dpi=150, bbox_inches='tight', facecolor='#111827')
+                        st.pyplot(fig2)
+                        plt.close()
 
-                    # Plot 3: FSC vs SSC scatter
+                    # =========================================================================
+                    # ANOMALY DETECTION ANALYSIS
+                    # =========================================================================
+                    anomaly_mask = None
+                    anomaly_results = {}
+                    
+                    if enable_anomaly_detection and use_anomaly_detection:
+                        st.markdown("---")
+                        st.markdown("### 🔍 Anomaly Detection Results")
+                        
+                        try:
+                            detector = AnomalyDetector()
+                            
+                            # Prepare data for anomaly detection
+                            analysis_cols = [fsc_col, ssc_col]
+                            if "estimated_diameter_nm" in df.columns:
+                                analysis_cols.append("estimated_diameter_nm")
+                            
+                            df_for_anomaly = df[analysis_cols].copy()
+                            
+                            # Run selected detection methods
+                            if anomaly_method in ["Z-Score", "Both"]:
+                                df_zscore = detector.detect_outliers_zscore(
+                                    df_for_anomaly,
+                                    channels=analysis_cols,
+                                    threshold=zscore_threshold
+                                )
+                                zscore_anomalies = df_zscore['is_outlier'].sum()
+                                anomaly_results['zscore'] = {
+                                    'count': int(zscore_anomalies),
+                                    'percentage': float(zscore_anomalies / len(df) * 100),
+                                    'mask': df_zscore['is_outlier'].values
+                                }
+                            
+                            if anomaly_method in ["IQR", "Both"]:
+                                df_iqr = detector.detect_outliers_iqr(
+                                    df_for_anomaly,
+                                    channels=analysis_cols,
+                                    factor=iqr_factor
+                                )
+                                iqr_anomalies = df_iqr['is_outlier_iqr'].sum()
+                                anomaly_results['iqr'] = {
+                                    'count': int(iqr_anomalies),
+                                    'percentage': float(iqr_anomalies / len(df) * 100),
+                                    'mask': df_iqr['is_outlier_iqr'].values
+                                }
+                            
+                            # Combine masks for visualization
+                            if anomaly_method == "Both":
+                                anomaly_mask = anomaly_results['zscore']['mask'] | anomaly_results['iqr']['mask']
+                                combined_count = anomaly_mask.sum()
+                            elif anomaly_method == "Z-Score":
+                                anomaly_mask = anomaly_results['zscore']['mask']
+                                combined_count = anomaly_results['zscore']['count']
+                            else:  # IQR
+                                anomaly_mask = anomaly_results['iqr']['mask']
+                                combined_count = anomaly_results['iqr']['count']
+                            
+                            # Display anomaly statistics
+                            anom_cols = st.columns(4)
+                            
+                            with anom_cols[0]:
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                                    <div class="stat-value" style="color: white;">{combined_count:,}</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Anomalies Detected</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with anom_cols[1]:
+                                pct = (combined_count / len(df)) * 100
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);">
+                                    <div class="stat-value" style="color: white;">{pct:.2f}%</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Anomaly Rate</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with anom_cols[2]:
+                                normal_count = len(df) - combined_count
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+                                    <div class="stat-value" style="color: white;">{normal_count:,}</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Normal Events</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with anom_cols[3]:
+                                method_display = anomaly_method
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+                                    <div class="stat-value" style="color: white; font-size: 1.2rem;">{method_display}</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Detection Method</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            # Detailed breakdown
+                            with st.expander("📊 Detailed Anomaly Breakdown", expanded=False):
+                                if 'zscore' in anomaly_results:
+                                    st.markdown(f"**Z-Score Method** (threshold: {zscore_threshold}σ)")
+                                    st.write(f"- Anomalies: {anomaly_results['zscore']['count']:,} ({anomaly_results['zscore']['percentage']:.2f}%)")
+                                
+                                if 'iqr' in anomaly_results:
+                                    st.markdown(f"**IQR Method** (factor: {iqr_factor})")
+                                    st.write(f"- Anomalies: {anomaly_results['iqr']['count']:,} ({anomaly_results['iqr']['percentage']:.2f}%)")
+                                
+                                if anomaly_method == "Both":
+                                    st.markdown("**Combined (Union)**")
+                                    st.write(f"- Total unique anomalies: {combined_count:,}")
+                                
+                                # Show anomaly size statistics if available
+                                if "estimated_diameter_nm" in df.columns and anomaly_mask is not None:
+                                    anomaly_sizes = df.loc[anomaly_mask, "estimated_diameter_nm"].dropna()
+                                    normal_sizes = df.loc[~anomaly_mask, "estimated_diameter_nm"].dropna()
+                                    
+                                    if len(anomaly_sizes) > 0:
+                                        st.markdown("---")
+                                        st.markdown("**Size Distribution of Anomalies:**")
+                                        size_comparison = pd.DataFrame({
+                                            'Metric': ['Mean (nm)', 'Median (nm)', 'Std Dev (nm)', 'Min (nm)', 'Max (nm)'],
+                                            'Anomalies': [
+                                                f"{anomaly_sizes.mean():.1f}",
+                                                f"{anomaly_sizes.median():.1f}",
+                                                f"{anomaly_sizes.std():.1f}",
+                                                f"{anomaly_sizes.min():.1f}",
+                                                f"{anomaly_sizes.max():.1f}"
+                                            ],
+                                            'Normal': [
+                                                f"{normal_sizes.mean():.1f}",
+                                                f"{normal_sizes.median():.1f}",
+                                                f"{normal_sizes.std():.1f}",
+                                                f"{normal_sizes.min():.1f}",
+                                                f"{normal_sizes.max():.1f}"
+                                            ]
+                                        })
+                                        st.dataframe(size_comparison, hide_index=True, use_container_width=True)
+                            
+                            # Add anomaly flag to dataframe
+                            df['is_anomaly'] = anomaly_mask
+                            
+                            # Interpretation message
+                            if pct < 1:
+                                st.success(f"✅ Low anomaly rate ({pct:.2f}%) - Data quality looks good!")
+                            elif pct < 5:
+                                st.info(f"ℹ️ Moderate anomaly rate ({pct:.2f}%) - Review flagged events")
+                            else:
+                                st.warning(f"⚠️ High anomaly rate ({pct:.2f}%) - Consider investigating sample quality or acquisition settings")
+                            
+                        except Exception as e:
+                            st.error(f"Anomaly detection failed: {str(e)}")
+                            anomaly_mask = None
+
+                    # Plot 3: FSC vs SSC scatter (with anomaly highlighting)
                     if fsc_col in df.columns and ssc_col in df.columns:
-                        fig3, ax3 = plt.subplots(figsize=(8, 6))
-                        fig3.patch.set_facecolor('#111827')
-                        ax3.set_facecolor('#111827')
-                        scatter = ax3.scatter(df[fsc_col], df[ssc_col], s=8, alpha=0.5, c='#7c3aed')
-                        ax3.set_xlabel(fsc_col, color='#f8fafc', fontsize=12)
-                        ax3.set_ylabel(ssc_col, color='#f8fafc', fontsize=12)
-                        ax3.set_title("FSC vs SSC", color='#f8fafc', fontsize=14, fontweight='bold')
-                        ax3.tick_params(colors='#94a3b8')
-                        for spine in ax3.spines.values():
-                            spine.set_color('#374151')
-                        ax3.grid(True, alpha=0.2, color='#374151')
-                        st.pyplot(fig3)
-                        plt.close()
+                        if use_plotly and use_interactive_plots:
+                            # Plotly interactive version
+                            fig3_plotly = create_fsc_ssc_scatter(
+                                data=df,
+                                fsc_col=fsc_col,
+                                ssc_col=ssc_col,
+                                anomaly_mask=anomaly_mask,
+                                highlight_anomalies=highlight_anomalies,
+                                title="FSC vs SSC Scatter Plot"
+                            )
+                            st.plotly_chart(fig3_plotly, use_container_width=True, config=plotly_config)
+                        else:
+                            # Matplotlib static version
+                            fig3, ax3 = plt.subplots(figsize=(8, 6))
+                            fig3.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                            ax3.set_facecolor('#111827')
+                            
+                            # Plot normal points
+                            if anomaly_mask is not None and highlight_anomalies:
+                                normal_mask = ~anomaly_mask
+                                ax3.scatter(
+                                    df.loc[normal_mask, fsc_col], 
+                                    df.loc[normal_mask, ssc_col], 
+                                    s=8, alpha=0.5, c='#7c3aed', label='Normal'
+                                )
+                                # Plot anomalies on top with different color
+                                ax3.scatter(
+                                    df.loc[anomaly_mask, fsc_col], 
+                                    df.loc[anomaly_mask, ssc_col], 
+                                    s=15, alpha=0.8, c='#ef4444', marker='x', 
+                                    linewidths=1, label=f'Anomalies ({anomaly_mask.sum():,})'
+                                )
+                                ax3.legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc', loc='upper right')
+                                title_suffix = " (Anomalies Highlighted)"
+                            else:
+                                ax3.scatter(df[fsc_col], df[ssc_col], s=8, alpha=0.5, c='#7c3aed')
+                                title_suffix = ""
+                            
+                            ax3.set_xlabel(fsc_col, color='#f8fafc', fontsize=12)
+                            ax3.set_ylabel(ssc_col, color='#f8fafc', fontsize=12)
+                            ax3.set_title(f"FSC vs SSC{title_suffix}", color='#f8fafc', fontsize=14, fontweight='bold')
+                            ax3.tick_params(colors='#94a3b8')
+                            for spine in ax3.spines.values():
+                                spine.set_color('#374151')
+                            ax3.grid(True, alpha=0.2, color='#374151')
+                            st.pyplot(fig3)
+                            plt.close()
 
-                    # Plot 4: Diameter vs SSC
+                    # Plot 4: Diameter vs SSC (with anomaly highlighting)
                     if "estimated_diameter_nm" in df.columns and ssc_col in df.columns:
-                        fig4, ax4 = plt.subplots(figsize=(10, 5))
-                        fig4.patch.set_facecolor('#111827')
-                        ax4.set_facecolor('#111827')
-                        ax4.scatter(df["estimated_diameter_nm"], df[ssc_col], s=8, alpha=0.5, c='#10b981')
-                        ax4.set_xlabel("Estimated Diameter (nm)", color='#f8fafc', fontsize=12)
-                        ax4.set_ylabel(ssc_col, color='#f8fafc', fontsize=12)
-                        ax4.set_title(f"Estimated Diameter vs {ssc_col}", color='#f8fafc', fontsize=14, fontweight='bold')
-                        ax4.tick_params(colors='#94a3b8')
-                        for spine in ax4.spines.values():
-                            spine.set_color('#374151')
-                        ax4.grid(True, alpha=0.2, color='#374151')
-                        st.pyplot(fig4)
-                        plt.close()
+                        if use_plotly and use_interactive_plots:
+                            # Plotly interactive version
+                            fig4_plotly = create_size_vs_scatter_plot(
+                                data=df,
+                                scatter_col=ssc_col,
+                                size_col="estimated_diameter_nm",
+                                anomaly_mask=anomaly_mask,
+                                highlight_anomalies=highlight_anomalies,
+                                title=f"Estimated Diameter vs {ssc_col}"
+                            )
+                            st.plotly_chart(fig4_plotly, use_container_width=True, config=plotly_config)
+                        else:
+                            # Matplotlib static version
+                            fig4, ax4 = plt.subplots(figsize=(10, 5))
+                            fig4.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                            ax4.set_facecolor('#111827')
+                            
+                            # Plot with anomaly highlighting if enabled
+                            if anomaly_mask is not None and highlight_anomalies:
+                                normal_mask = ~anomaly_mask
+                                ax4.scatter(
+                                    df.loc[normal_mask, "estimated_diameter_nm"], 
+                                    df.loc[normal_mask, ssc_col], 
+                                    s=8, alpha=0.5, c='#10b981', label='Normal'
+                                )
+                                ax4.scatter(
+                                    df.loc[anomaly_mask, "estimated_diameter_nm"], 
+                                    df.loc[anomaly_mask, ssc_col], 
+                                    s=15, alpha=0.8, c='#ef4444', marker='x', 
+                                    linewidths=1, label=f'Anomalies ({anomaly_mask.sum():,})'
+                                )
+                                ax4.legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc', loc='upper right')
+                                title_suffix = " (Anomalies Highlighted)"
+                            else:
+                                ax4.scatter(df["estimated_diameter_nm"], df[ssc_col], s=8, alpha=0.5, c='#10b981')
+                                title_suffix = ""
+                            
+                            ax4.set_xlabel("Estimated Diameter (nm)", color='#f8fafc', fontsize=12)
+                            ax4.set_ylabel(ssc_col, color='#f8fafc', fontsize=12)
+                            ax4.set_title(f"Estimated Diameter vs {ssc_col}{title_suffix}", color='#f8fafc', fontsize=14, fontweight='bold')
+                            ax4.tick_params(colors='#94a3b8')
+                            for spine in ax4.spines.values():
+                                spine.set_color('#374151')
+                            ax4.grid(True, alpha=0.2, color='#374151')
+                            st.pyplot(fig4)
+                            plt.close()
+                    
+                    # Interactive Dashboard (Plotly only)
+                    if use_plotly and use_interactive_plots:
+                        with st.expander("📊 Full Analysis Dashboard", expanded=False):
+                            st.caption("Combined view of all analyses in one interactive panel")
+                            dashboard_fig = create_analysis_dashboard(
+                                data=df,
+                                fsc_col=fsc_col,
+                                ssc_col=ssc_col,
+                                size_col="estimated_diameter_nm",
+                                anomaly_mask=anomaly_mask,
+                                highlight_anomalies=highlight_anomalies
+                            )
+                            st.plotly_chart(dashboard_fig, use_container_width=True, config=plotly_config)
+
+                    # Download anomaly data if available
+                    if anomaly_mask is not None and anomaly_mask.sum() > 0:
+                        st.markdown("---")
+                        st.markdown("### 📥 Export Anomaly Data")
+                        
+                        export_cols = st.columns(2)
+                        with export_cols[0]:
+                            # Export anomalies only
+                            anomaly_df = df[anomaly_mask].copy()
+                            csv_anomalies = anomaly_df.to_csv(index=False).encode()
+                            st.download_button(
+                                "⬇️ Download Anomalies Only",
+                                data=csv_anomalies,
+                                file_name="anomalies_only.csv",
+                                mime="text/csv",
+                                help=f"Download {anomaly_mask.sum():,} anomalous events"
+                            )
+                        
+                        with export_cols[1]:
+                            # Export with anomaly flag
+                            csv_with_flag = df.to_csv(index=False).encode()
+                            st.download_button(
+                                "⬇️ Download All Data (with anomaly flag)",
+                                data=csv_with_flag,
+                                file_name="data_with_anomaly_flags.csv",
+                                mime="text/csv",
+                                help="Download all data with 'is_anomaly' column"
+                            )
 
                     st.success(f"Histogram saved to: {plot_path}")
 
-                    # Save session results
+                    # =========================================================================
+                    # CACHE ALL ANALYSIS RESULTS FOR TAB PERSISTENCE
+                    # =========================================================================
                     st.session_state["last_analysis_df"] = df.copy()
                     st.session_state["last_theoretical"] = {"diameters": diameters, "ratios": theoretical_ratios}
+                    
+                    # Store complete analysis state for tab persistence
+                    st.session_state['fcs_analysis_complete'] = True
+                    st.session_state['fcs_results_df'] = df.copy()
+                    st.session_state['fcs_diameters'] = diameters
+                    st.session_state['fcs_theoretical_ratios'] = theoretical_ratios
+                    st.session_state['fcs_analysis_params'] = {
+                        'fsc_col': fsc_col,
+                        'ssc_col': ssc_col,
+                        'lambda_nm': lambda_nm,
+                        'n_particle': n_particle,
+                        'n_medium': n_medium,
+                        'fsc_range': fsc_range,
+                        'ssc_range': ssc_range,
+                        'd_min': d_min,
+                        'd_max': d_max,
+                        'use_plotly': use_plotly if use_interactive_plots else False,
+                        'enable_anomaly': enable_anomaly_detection if use_anomaly_detection else False,
+                        'anomaly_method': anomaly_method if use_anomaly_detection else None,
+                        'zscore_threshold': zscore_threshold if use_anomaly_detection else None,
+                        'iqr_factor': iqr_factor if use_anomaly_detection else None
+                    }
+                    if anomaly_mask is not None:
+                        st.session_state['fcs_anomaly_mask'] = anomaly_mask
+                        st.session_state['fcs_anomaly_results'] = anomaly_results
+                    
+                    # Store FCS data for cross-comparison
+                    st.session_state['fcs_data'] = df.copy()
+                    fcs_name = getattr(file2, 'name', None) if file2 else None
+                    st.session_state['fcs_filename'] = fcs_name if fcs_name else 'FCS Sample'
+                    st.session_state['fcs_fsc_col'] = fsc_col
+                    st.session_state['fcs_ssc_col'] = ssc_col
 
-    # Show previous results if present
-    if st.session_state.get("last_analysis_df") is not None:
+    # =========================================================================
+    # DISPLAY CACHED RESULTS WHEN TAB IS REVISITED
+    # =========================================================================
+    elif has_cached_results and not run_analysis:
+        # User has cached results and is viewing the tab (not running new analysis)
         st.markdown("---")
-        st.info("Previous analysis available in this session. You can re-download or re-plot.")
-        if st.button("Show Previous Results"):
-            df_prev = st.session_state["last_analysis_df"]
-            preview_cols = [c for c in ["Event/EVs Sl.No", st.session_state.get("fsc_col_selected"), st.session_state.get("ssc_col_selected"), "measured_ratio", "estimated_diameter_nm"] if c in df_prev.columns]
-            st.dataframe(df_prev[preview_cols].head(200), width='stretch')
+        st.markdown("""
+        <div style='background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%); 
+                    padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;
+                    border-left: 4px solid #00b4d8;'>
+            <div style='display: flex; align-items: center; gap: 10px;'>
+                <span style='font-size: 24px;'>📊</span>
+                <div>
+                    <h4 style='margin: 0; color: #00b4d8;'>Cached Analysis Results</h4>
+                    <p style='margin: 0; color: #94a3b8; font-size: 13px;'>
+                        Results from your previous analysis are displayed below. Click "Run Analysis" to re-analyze or "Reset Tab" to start fresh.
+                    </p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Retrieve cached data
+        df = st.session_state.get('fcs_results_df')
+        diameters = st.session_state.get('fcs_diameters')
+        theoretical_ratios = st.session_state.get('fcs_theoretical_ratios')
+        params = st.session_state.get('fcs_analysis_params', {})
+        anomaly_mask = st.session_state.get('fcs_anomaly_mask')
+        anomaly_results = st.session_state.get('fcs_anomaly_results', {})
+        
+        fsc_col = params.get('fsc_col', 'FSC')
+        ssc_col = params.get('ssc_col', 'SSC')
+        use_plotly = params.get('use_plotly', False)
+        enable_anomaly_detection_cached = params.get('enable_anomaly', False)
+        
+        if df is not None and len(df) > 0:
+            # Display stat cards
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                mean_val = df['estimated_diameter_nm'].mean()
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{mean_val:.1f}</div>
+                    <div class="stat-label">Mean Size (nm)</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                median_val = df['estimated_diameter_nm'].median()
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{median_val:.1f}</div>
+                    <div class="stat-label">Median Size (nm)</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col3:
+                std_val = df['estimated_diameter_nm'].std()
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{std_val:.1f}</div>
+                    <div class="stat-label">Std Dev (nm)</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col4:
+                total = len(df)
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{total:,}</div>
+                    <div class="stat-label">Total Particles</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Size Range Distribution (if defined)
+            if st.session_state.get("custom_size_ranges"):
+                st.markdown("---")
+                st.markdown("### 📊 Size Range Distribution")
+                
+                size_data = df['estimated_diameter_nm'].dropna()
+                range_counts = []
+                for r in st.session_state.custom_size_ranges:
+                    count = len(size_data[(size_data >= r['min']) & (size_data <= r['max'])])
+                    pct = (count / len(size_data) * 100) if len(size_data) > 0 else 0
+                    range_counts.append({"name": r['name'], "range": f"{r['min']}-{r['max']} nm", "count": count, "percentage": pct})
+                
+                num_ranges = len(range_counts)
+                if num_ranges > 0:
+                    cols = st.columns(min(num_ranges, 4))
+                    for i, rc in enumerate(range_counts):
+                        with cols[i % 4]:
+                            st.markdown(f"""
+                            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <div class="stat-value" style="color: white;">{rc['count']:,}</div>
+                                <div class="stat-label" style="color: rgba(255,255,255,0.9);">{rc['name']}</div>
+                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">{rc['range']} • {rc['percentage']:.1f}%</div>
+                            </div>
+                            """, unsafe_allow_html=True)
 
+            # Results preview
+            preview_cols = [c for c in ["Event/EVs Sl.No", fsc_col, ssc_col, "measured_ratio", "estimated_diameter_nm"] if c in df.columns]
+            st.markdown("**Results Preview:**")
+            st.dataframe(df[preview_cols].head(200), use_container_width=True)
+            
+            # Download button
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_bytes = csv_buffer.getvalue().encode()
+            st.download_button("Download Results CSV", data=csv_bytes, file_name="estimated_sizes.csv", mime="text/csv")
+            
+            measured = df.dropna(subset=["estimated_diameter_nm", "measured_ratio"])
+            
+            # Visualizations
+            plotly_config = get_export_config() if use_interactive_plots else {}
+            
+            if use_plotly and use_interactive_plots:
+                st.markdown("---")
+                st.markdown("### 📊 Interactive Visualizations (Cached)")
+                st.caption("💡 Tip: Hover for details • Scroll to zoom • Drag to pan • Double-click to reset")
+                
+                # Plot 1: Theoretical vs Measured
+                fig1_plotly = create_theoretical_vs_measured_plot(
+                    diameters=diameters,
+                    theoretical_ratios=theoretical_ratios,
+                    measured_data=measured,
+                    diameter_col="estimated_diameter_nm",
+                    ratio_col="measured_ratio",
+                    title="Theoretical vs Measured FSC/SSC Ratio"
+                )
+                st.plotly_chart(fig1_plotly, use_container_width=True, config=plotly_config)
+                
+                # Plot 2: Size Distribution Histogram
+                size_ranges_for_plot = st.session_state.get("custom_size_ranges", None)
+                fig2_plotly = create_size_distribution_histogram(
+                    data=df,
+                    size_col="estimated_diameter_nm",
+                    nbins=50,
+                    title="Particle Size Distribution",
+                    show_size_ranges=bool(size_ranges_for_plot),
+                    size_ranges=size_ranges_for_plot
+                )
+                st.plotly_chart(fig2_plotly, use_container_width=True, config=plotly_config)
+                
+                # Anomaly Detection Results (if available)
+                if enable_anomaly_detection_cached and anomaly_mask is not None:
+                    st.markdown("---")
+                    st.markdown("### 🔍 Anomaly Detection Results (Cached)")
+                    
+                    combined_count = int(anomaly_mask.sum()) if anomaly_mask is not None else 0
+                    
+                    anom_cols = st.columns(4)
+                    with anom_cols[0]:
+                        st.markdown(f"""
+                        <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <div class="stat-value" style="color: white;">{combined_count:,}</div>
+                            <div class="stat-label" style="color: rgba(255,255,255,0.9);">Anomalies Detected</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with anom_cols[1]:
+                        pct = (combined_count / len(df)) * 100
+                        st.markdown(f"""
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);">
+                            <div class="stat-value" style="color: white;">{pct:.2f}%</div>
+                            <div class="stat-label" style="color: rgba(255,255,255,0.9);">Anomaly Rate</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with anom_cols[2]:
+                        normal_count = len(df) - combined_count
+                        st.markdown(f"""
+                        <div class="stat-card" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+                            <div class="stat-value" style="color: white;">{normal_count:,}</div>
+                            <div class="stat-label" style="color: rgba(255,255,255,0.9);">Normal Events</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with anom_cols[3]:
+                        method_display = params.get('anomaly_method', 'Unknown')
+                        st.markdown(f"""
+                        <div class="stat-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+                            <div class="stat-value" style="color: white; font-size: 1.2rem;">{method_display}</div>
+                            <div class="stat-label" style="color: rgba(255,255,255,0.9);">Detection Method</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Scatter plots with anomalies
+                    if use_interactive_plots:
+                        highlight_anomalies = combined_count > 0
+                        
+                        scatter_cols = st.columns(2)
+                        with scatter_cols[0]:
+                            fig_fsc_ssc = create_fsc_ssc_scatter(
+                                data=df, fsc_col=fsc_col, ssc_col=ssc_col,
+                                anomaly_mask=anomaly_mask, highlight_anomalies=highlight_anomalies,
+                                title="FSC vs SSC (with Anomalies)"
+                            )
+                            st.plotly_chart(fig_fsc_ssc, use_container_width=True, config=plotly_config)
+                        
+                        with scatter_cols[1]:
+                            if "estimated_diameter_nm" in df.columns:
+                                fig_size_scatter = create_size_vs_scatter_plot(
+                                    data=df, size_col="estimated_diameter_nm", scatter_col=ssc_col,
+                                    anomaly_mask=anomaly_mask, highlight_anomalies=highlight_anomalies,
+                                    title="Diameter vs SSC (with Anomalies)"
+                                )
+                                st.plotly_chart(fig_size_scatter, use_container_width=True, config=plotly_config)
+            
+            else:
+                # Matplotlib static plots (cached)
+                st.markdown("---")
+                st.markdown("### 📊 Static Visualizations (Cached)")
+                
+                plt.style.use('dark_background')
+                
+                fig1, ax1 = plt.subplots(figsize=(10, 5))
+                fig1.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                ax1.set_facecolor('#111827')
+                ax1.plot(diameters, theoretical_ratios, color='#00b4d8', linewidth=2, label="Theoretical ratio")
+                if not measured.empty:
+                    ax1.scatter(measured["estimated_diameter_nm"], measured["measured_ratio"], s=20, alpha=0.6, c='#f72585', label="Measured events")
+                ax1.set_xlabel("Diameter (nm)", color='#f8fafc', fontsize=12)
+                ax1.set_ylabel("FSC/SSC ratio", color='#f8fafc', fontsize=12)
+                ax1.legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc')
+                ax1.tick_params(colors='#94a3b8')
+                for spine in ax1.spines.values():
+                    spine.set_color('#374151')
+                ax1.grid(True, alpha=0.2, color='#374151')
+                st.pyplot(fig1)
+                plt.close()
+
+                fig2, ax2 = plt.subplots(figsize=(10, 5))
+                fig2.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                ax2.set_facecolor('#111827')
+                ax2.hist(measured["estimated_diameter_nm"].dropna(), bins=40, color='#00b4d8', edgecolor='#0096c7', alpha=0.85)
+                ax2.set_xlabel("Estimated diameter (nm)", color='#f8fafc', fontsize=12)
+                ax2.set_ylabel("Counts", color='#f8fafc', fontsize=12)
+                ax2.set_title("Particle Size Distribution", color='#f8fafc', fontsize=14, fontweight='bold')
+                ax2.tick_params(colors='#94a3b8')
+                for spine in ax2.spines.values():
+                    spine.set_color('#374151')
+                ax2.grid(True, alpha=0.2, color='#374151')
+                st.pyplot(fig2)
+                plt.close()
+    
+    # Show message if no analysis has been run yet
+    elif not has_cached_results and not run_analysis:
+        if st.session_state.get("analysis_df") is not None:
+            st.info("📊 File loaded. Click **Run Analysis** to start particle size analysis.")
+        # Otherwise the file uploader section above will show its own prompts
 
 # -------------------------
 # TAB 3: Nanoparticle Tracking Analysis
 # -------------------------
 
-with tab3:
+if st.session_state.active_tab == "⚛ Nanoparticle Tracking":
     st.markdown(
         """
         <div style='text-align:center;'>
@@ -2538,9 +3714,26 @@ with tab3:
 
     uploaded_file_nta = st.file_uploader(
         "📎 Upload NTA Data File",
-        type=["csv", "xlsx", "xls", "json", "parquet"],
-        help="Supported formats: CSV, Excel, JSON, Parquet"
+        type=["txt", "csv", "xlsx", "xls", "json", "parquet", "tsv"],
+        help="Supported formats: TXT/TSV (ZetaView), CSV, Excel, JSON, Parquet. If you don't see .txt files, change the file type filter in the dialog to 'All Files'.",
+        key="nta_file_uploader"
     )
+    
+    # Reset Tab button for NTA
+    if st.session_state.get('nta_data') is not None:
+        reset_cols = st.columns([3, 1])
+        with reset_cols[1]:
+            if st.button("🔄 Reset Tab", key="reset_nta_tab", use_container_width=True, help="Clear cached NTA analysis and start fresh"):
+                keys_to_clear = [
+                    'nta_data', 'nta_raw_data', 'nta_filename', 'nta_correction_enabled',
+                    'nta_correction_factor', 'nta_measurement_temp', 'nta_reference_temp',
+                    'nta_media_type', 'nta_media_viscosity', 'nta_correction_applied'
+                ]
+                for key in keys_to_clear:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.success("NTA Tab reset! Upload a new file to analyze.")
+                st.rerun()
 
     # Show Best Practices above upload if file not uploaded yet
     if uploaded_file_nta:
@@ -2552,7 +3745,7 @@ with tab3:
         )
 
         # Optionally show details in expanders
-        with st.expander("🛠️ Machine Calibration", expanded=True):
+        with st.expander("🛠️ Machine Calibration", expanded=False):
             st.markdown(
                 """
                 <ul style="line-height:1.8;">
@@ -2563,7 +3756,7 @@ with tab3:
                 unsafe_allow_html=True
             )
 
-        with st.expander("🧪 Sample Preparation", expanded=True):
+        with st.expander("🧪 Sample Preparation", expanded=False):
             st.markdown(
                 """
                 <ul style="line-height:1.8;">
@@ -2580,10 +3773,1238 @@ with tab3:
                 unsafe_allow_html=True
             )
 
-        # Reconfirm upload
-        st.success("📁 File uploaded successfully!")
-        st.info("✔ You may now proceed with NTA analysis.")
+        # File upload confirmation
+        st.success(f"📁 File uploaded: **{uploaded_file_nta.name}** ({uploaded_file_nta.size / 1024:.1f} KB)")
+        
+        # =====================================================================
+        # TEMPERATURE-VISCOSITY CORRECTION SETTINGS (SIDEBAR)
+        # =====================================================================
+        with st.sidebar:
+            st.markdown("---")
+            st.markdown("### 🌡️ Temperature Correction")
+            
+            if use_nta_corrections:
+                # Enable/disable corrections
+                apply_corrections = st.toggle(
+                    "Apply Temperature Correction",
+                    value=False,
+                    help="Apply Stokes-Einstein correction for temperature/viscosity differences"
+                )
+                
+                if apply_corrections:
+                    st.markdown("##### Measurement Conditions")
+                    
+                    # Measurement temperature
+                    measurement_temp = st.number_input(
+                        "Measurement Temperature (°C)",
+                        min_value=10.0,
+                        max_value=45.0,
+                        value=25.0,
+                        step=0.5,
+                        help="Actual temperature during NTA measurement"
+                    )
+                    
+                    # Reference temperature
+                    reference_temp = st.number_input(
+                        "Reference Temperature (°C)",
+                        min_value=15.0,
+                        max_value=40.0,
+                        value=25.0,
+                        step=0.5,
+                        help="Standard reference temperature (typically 25°C)"
+                    )
+                    
+                    # Media type
+                    media_options = list(MEDIA_VISCOSITY_FACTORS.keys())
+                    media_type = st.selectbox(
+                        "Measurement Medium",
+                        options=media_options,
+                        index=0,
+                        help="Select the medium used for NTA measurement"
+                    )
+                    
+                    # Calculate and display correction factor
+                    try:
+                        media_visc, media_note = get_media_viscosity(media_type, measurement_temp)
+                        ref_visc = calculate_water_viscosity(reference_temp)
+                        correction_factor, correction_details = get_correction_factor(
+                            measurement_temp, 
+                            reference_temp,
+                            measurement_viscosity=media_visc,
+                            reference_viscosity=ref_visc
+                        )
+                        
+                        # Display correction info
+                        st.markdown("##### Correction Summary")
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric(
+                                "Correction Factor",
+                                f"{correction_factor:.4f}",
+                                delta=f"{(correction_factor-1)*100:+.1f}%"
+                            )
+                        with col2:
+                            st.metric(
+                                "Medium Viscosity",
+                                f"{media_visc*1000:.3f} mPa·s"
+                            )
+                        
+                        st.caption(f"ℹ️ {media_note}")
+                        
+                        # Store in session state
+                        st.session_state['nta_correction_enabled'] = True
+                        st.session_state['nta_correction_factor'] = correction_factor
+                        st.session_state['nta_measurement_temp'] = measurement_temp
+                        st.session_state['nta_reference_temp'] = reference_temp
+                        st.session_state['nta_media_type'] = media_type
+                        st.session_state['nta_media_viscosity'] = media_visc
+                        
+                    except Exception as e:
+                        st.error(f"Error calculating correction: {str(e)}")
+                        st.session_state['nta_correction_enabled'] = False
+                else:
+                    st.session_state['nta_correction_enabled'] = False
+                    st.info("Enable to correct sizes for temperature/viscosity differences")
+                    
+                # Reference table expander
+                with st.expander("📊 Viscosity Reference Table"):
+                    if use_nta_corrections:
+                        visc_table = get_viscosity_temperature_table(15, 40, 5)
+                        st.dataframe(
+                            visc_table.style.format({
+                                'Viscosity (mPa·s)': '{:.4f}',
+                                'Viscosity (Pa·s)': '{:.6f}'
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+            else:
+                st.warning("NTA corrections module not available")
+                st.session_state['nta_correction_enabled'] = False
+        
+        # =====================================================================
+        # NTA DATA PARSING AND ANALYSIS
+        # =====================================================================
+        st.markdown("---")
+        st.markdown("### 📊 NTA Data Analysis")
+        
+        try:
+            # Read and parse the NTA file
+            file_ext = uploaded_file_nta.name.split('.')[-1].lower()
+            
+            if file_ext in ['txt', 'tsv']:
+                # Parse ZetaView TXT/TSV format
+                content = uploaded_file_nta.read().decode('utf-8', errors='ignore')
+                lines = content.split('\n')
+                
+                # Try to find the data section (tab-separated values)
+                data_lines = []
+                header_found = False
+                header_line = None
+                
+                for line in lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # Check if this looks like a header row
+                    if 'Position' in line or 'Mean Int' in line or 'Conc' in line:
+                        header_line = line
+                        header_found = True
+                        continue
+                    
+                    # If we found header, collect data rows
+                    if header_found:
+                        # Skip summary rows (Mean, St.Dev., etc.)
+                        if line.startswith('Mean') or line.startswith('St.Dev') or line.startswith('Rel.St.Dev'):
+                            continue
+                        if '\t' in line:
+                            data_lines.append(line)
+                
+                if data_lines and header_line:
+                    # Parse into DataFrame
+                    from io import StringIO
+                    data_text = header_line + '\n' + '\n'.join(data_lines)
+                    df_nta = pd.read_csv(StringIO(data_text), sep='\t', engine='python')
+                    
+                    # Clean column names
+                    df_nta.columns = [col.strip() for col in df_nta.columns]
+                else:
+                    # Fallback: try reading as plain TSV
+                    uploaded_file_nta.seek(0)
+                    df_nta = pd.read_csv(uploaded_file_nta, sep='\t', engine='python', skiprows=0)
+                    
+            elif file_ext == 'csv':
+                df_nta = pd.read_csv(uploaded_file_nta)
+            elif file_ext in ['xlsx', 'xls']:
+                df_nta = pd.read_excel(uploaded_file_nta)
+            elif file_ext == 'parquet':
+                df_nta = pd.read_parquet(uploaded_file_nta)
+            elif file_ext == 'json':
+                df_nta = pd.read_json(uploaded_file_nta)
+            else:
+                st.error(f"Unsupported file format: {file_ext}")
+                df_nta = None
+            
+            if df_nta is not None and not df_nta.empty:
+                # Display data preview
+                st.markdown("#### 📋 Data Preview")
+                st.dataframe(df_nta.head(20), use_container_width=True)
+                
+                # Show column info
+                with st.expander("📊 Column Information", expanded=False):
+                    col_info = pd.DataFrame({
+                        'Column': df_nta.columns,
+                        'Type': df_nta.dtypes.astype(str),
+                        'Non-Null': df_nta.count().values,
+                        'Sample Value': [str(df_nta[col].iloc[0]) if len(df_nta) > 0 else 'N/A' for col in df_nta.columns]
+                    })
+                    st.dataframe(col_info, use_container_width=True)
+                
+                # =====================================================================
+                # KEY METRICS EXTRACTION
+                # =====================================================================
+                st.markdown("---")
+                st.markdown("#### 📈 Key Metrics")
+                
+                # Check if corrections are enabled
+                nta_correction_active = st.session_state.get('nta_correction_enabled', False)
+                nta_correction_factor = st.session_state.get('nta_correction_factor', 1.0)
+                
+                # Show correction status badge
+                if nta_correction_active and use_nta_corrections:
+                    st.markdown(
+                        f"""<div style='background:#1e40af; color:#93c5fd; padding:8px 12px; 
+                        border-radius:6px; margin-bottom:10px; display:inline-block;'>
+                        🌡️ <b>Temperature Correction Active</b> | 
+                        Factor: {nta_correction_factor:.4f} | 
+                        {st.session_state.get('nta_measurement_temp', 25):.1f}°C → {st.session_state.get('nta_reference_temp', 25):.1f}°C
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+                
+                # Try to identify key columns
+                possible_size_cols = [c for c in df_nta.columns if any(x in c.lower() for x in ['x50', 'size', 'diameter', 'd50', 'peak'])]
+                possible_conc_cols = [c for c in df_nta.columns if any(x in c.lower() for x in ['conc', 'concentration', 'particles'])]
+                possible_pos_cols = [c for c in df_nta.columns if any(x in c.lower() for x in ['position', 'pos'])]
+                
+                # Display metrics in cards
+                metric_cols = st.columns(4)
+                
+                # Metric 1: Number of positions/measurements
+                with metric_cols[0]:
+                    n_measurements = len(df_nta)
+                    st.metric("📍 Measurements", n_measurements)
+                
+                # Metric 2: Size (X50/D50) - with correction
+                with metric_cols[1]:
+                    if possible_size_cols:
+                        size_col = possible_size_cols[0]
+                        size_data_raw = pd.to_numeric(df_nta[size_col], errors='coerce').dropna()
+                        # Filter out invalid values (like 5997.5 which indicates no data)
+                        size_data_raw = size_data_raw[size_data_raw < 1000]
+                        if len(size_data_raw) > 0:
+                            mean_size_raw = size_data_raw.mean()
+                            
+                            # Apply correction if enabled
+                            if nta_correction_active and use_nta_corrections:
+                                mean_size_corrected = mean_size_raw * nta_correction_factor
+                                delta_pct = (mean_size_corrected - mean_size_raw) / mean_size_raw * 100
+                                st.metric(
+                                    "📏 Mean Size (nm)", 
+                                    f"{mean_size_corrected:.1f}",
+                                    delta=f"{delta_pct:+.1f}% corrected"
+                                )
+                            else:
+                                st.metric("📏 Mean Size (nm)", f"{mean_size_raw:.1f}")
+                        else:
+                            st.metric("📏 Mean Size (nm)", "N/A")
+                    else:
+                        st.metric("📏 Mean Size (nm)", "N/A")
+                
+                # Metric 3: Concentration
+                with metric_cols[2]:
+                    if possible_conc_cols:
+                        conc_col = possible_conc_cols[0]
+                        conc_data = pd.to_numeric(df_nta[conc_col].astype(str).str.replace('E', 'e'), errors='coerce').dropna()
+                        if len(conc_data) > 0:
+                            mean_conc = conc_data.mean()
+                            st.metric("🔬 Avg Conc (p/mL)", f"{mean_conc:.2e}")
+                        else:
+                            st.metric("🔬 Avg Conc (p/mL)", "N/A")
+                    else:
+                        st.metric("🔬 Avg Conc (p/mL)", "N/A")
+                
+                # Metric 4: Valid positions (with traces)
+                with metric_cols[3]:
+                    if 'No. of Traces' in df_nta.columns:
+                        traces = pd.to_numeric(df_nta['No. of Traces'], errors='coerce')
+                        valid_positions = (traces > 0).sum()
+                        st.metric("✅ Valid Positions", f"{valid_positions}/{n_measurements}")
+                    else:
+                        st.metric("✅ Valid Positions", "N/A")
+                
+                # =====================================================================
+                # VISUALIZATION
+                # =====================================================================
+                st.markdown("---")
+                st.markdown("#### 📊 Visualizations")
+                st.caption("💡 Tip: Hover for details • Scroll to zoom • Drag to pan • Double-click to reset")
+                
+                # Get Plotly export config
+                plotly_config = get_export_config() if use_interactive_plots else {}
+                
+                viz_tabs = st.tabs(["📊 Size Distribution", "📈 Concentration Profile", "🔍 Position Analysis", "🌡️ Corrected View"])
+                
+                with viz_tabs[0]:
+                    # Size Distribution Plot (Raw or Corrected based on setting)
+                    if possible_size_cols:
+                        size_col = possible_size_cols[0]
+                        size_data_raw = pd.to_numeric(df_nta[size_col], errors='coerce').dropna()
+                        size_data_raw = size_data_raw[(size_data_raw > 0) & (size_data_raw < 1000)]  # Filter valid sizes
+                        
+                        # Apply correction if enabled
+                        if nta_correction_active and use_nta_corrections:
+                            size_data = size_data_raw * nta_correction_factor
+                            is_corrected = True
+                        else:
+                            size_data = size_data_raw
+                            is_corrected = False
+                        
+                        if len(size_data) > 0:
+                            # Use interactive Plotly plot if available
+                            if use_interactive_plots:
+                                fig_size = create_nta_size_distribution(
+                                    size_data.values,
+                                    nbins=20,
+                                    title="Particle Size Distribution",
+                                    show_percentiles=True,
+                                    corrected=is_corrected
+                                )
+                                st.plotly_chart(fig_size, use_container_width=True, config=plotly_config)
+                            else:
+                                # Fallback to matplotlib
+                                fig_size_mpl, ax_size = plt.subplots(figsize=(10, 5))
+                                fig_size_mpl.patch.set_facecolor('#111827')
+                                ax_size.set_facecolor('#111827')
+                                ax_size.hist(size_data, bins=20, color='#00b4d8', edgecolor='#0096c7', alpha=0.8)
+                                
+                                d10 = np.percentile(size_data, 10)
+                                d50 = np.percentile(size_data, 50)
+                                d90 = np.percentile(size_data, 90)
+                                
+                                ax_size.axvline(d10, color='#10b981', linestyle='--', linewidth=2, label=f'D10: {d10:.1f} nm')
+                                ax_size.axvline(d50, color='#f72585', linestyle='-', linewidth=2, label=f'D50: {d50:.1f} nm')
+                                ax_size.axvline(d90, color='#f59e0b', linestyle='--', linewidth=2, label=f'D90: {d90:.1f} nm')
+                                
+                                title_suffix = " (Corrected)" if is_corrected else ""
+                                ax_size.set_xlabel("Particle Size (nm)", color='#f8fafc', fontsize=12)
+                                ax_size.set_ylabel("Count", color='#f8fafc', fontsize=12)
+                                ax_size.set_title(f"Particle Size Distribution{title_suffix}", color='#f8fafc', fontsize=14, fontweight='bold')
+                                ax_size.tick_params(colors='#94a3b8')
+                                ax_size.legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc')
+                                for spine in ax_size.spines.values():
+                                    spine.set_color('#374151')
+                                ax_size.grid(True, alpha=0.2, color='#374151')
+                                
+                                st.pyplot(fig_size_mpl)
+                                plt.close()
+                            
+                            # Show statistics
+                            d10 = np.percentile(size_data, 10)
+                            d50 = np.percentile(size_data, 50)
+                            d90 = np.percentile(size_data, 90)
+                            title_suffix = " (Corrected)" if is_corrected else ""
+                            
+                            st.markdown(f"**Size Statistics{title_suffix}:**")
+                            stat_cols = st.columns(5)
+                            stat_cols[0].metric("D10", f"{d10:.1f} nm")
+                            stat_cols[1].metric("D50 (Median)", f"{d50:.1f} nm")
+                            stat_cols[2].metric("D90", f"{d90:.1f} nm")
+                            stat_cols[3].metric("Mean", f"{size_data.mean():.1f} nm")
+                            stat_cols[4].metric("Std Dev", f"{size_data.std():.1f} nm")
+                            
+                            # If corrections are active, show comparison
+                            if nta_correction_active and use_nta_corrections:
+                                with st.expander("📊 Raw vs Corrected Comparison", expanded=False):
+                                    d10_raw = np.percentile(size_data_raw, 10)
+                                    d50_raw = np.percentile(size_data_raw, 50)
+                                    d90_raw = np.percentile(size_data_raw, 90)
+                                    
+                                    comparison_df = pd.DataFrame({
+                                        'Metric': ['D10', 'D50 (Median)', 'D90', 'Mean', 'Std Dev'],
+                                        'Raw (nm)': [d10_raw, d50_raw, d90_raw, size_data_raw.mean(), size_data_raw.std()],
+                                        'Corrected (nm)': [d10, d50, d90, size_data.mean(), size_data.std()],
+                                        'Change (%)': [
+                                            (d10 - d10_raw) / d10_raw * 100,
+                                            (d50 - d50_raw) / d50_raw * 100,
+                                            (d90 - d90_raw) / d90_raw * 100,
+                                            (size_data.mean() - size_data_raw.mean()) / size_data_raw.mean() * 100,
+                                            (size_data.std() - size_data_raw.std()) / size_data_raw.std() * 100
+                                        ]
+                                    })
+                                    
+                                    st.dataframe(
+                                        comparison_df.style.format({
+                                            'Raw (nm)': '{:.1f}',
+                                            'Corrected (nm)': '{:.1f}',
+                                            'Change (%)': '{:+.2f}'
+                                        }).background_gradient(cmap='RdYlGn', subset=['Change (%)']),
+                                        use_container_width=True,
+                                        hide_index=True
+                                    )
+                        else:
+                            st.warning("No valid size data found in the file.")
+                    else:
+                        st.info("No size column detected. Available columns: " + ", ".join(df_nta.columns.tolist()))
+                
+                with viz_tabs[1]:
+                    # Concentration Profile
+                    if possible_conc_cols and possible_pos_cols:
+                        conc_col = possible_conc_cols[0]
+                        pos_col = possible_pos_cols[0]
+                        
+                        conc_data = pd.to_numeric(df_nta[conc_col].astype(str).str.replace('E', 'e'), errors='coerce')
+                        pos_data = pd.to_numeric(df_nta[pos_col], errors='coerce')
+                        
+                        valid_mask = conc_data.notna() & pos_data.notna()
+                        
+                        if valid_mask.sum() > 0:
+                            # Use interactive Plotly plot if available
+                            if use_interactive_plots:
+                                fig_conc = create_nta_concentration_profile(
+                                    pos_data[valid_mask].values,
+                                    conc_data[valid_mask].values,
+                                    title="Concentration by Position"
+                                )
+                                st.plotly_chart(fig_conc, use_container_width=True, config=plotly_config)
+                            else:
+                                # Fallback to matplotlib
+                                fig_conc_mpl, ax_conc = plt.subplots(figsize=(10, 5))
+                                fig_conc_mpl.patch.set_facecolor('#111827')
+                                ax_conc.set_facecolor('#111827')
+                                
+                                ax_conc.bar(pos_data[valid_mask], conc_data[valid_mask], color='#7c3aed', edgecolor='#a78bfa', alpha=0.8)
+                                
+                                ax_conc.set_xlabel("Position", color='#f8fafc', fontsize=12)
+                                ax_conc.set_ylabel("Concentration (p/mL)", color='#f8fafc', fontsize=12)
+                                ax_conc.set_title("Concentration by Position", color='#f8fafc', fontsize=14, fontweight='bold')
+                                ax_conc.tick_params(colors='#94a3b8')
+                                for spine in ax_conc.spines.values():
+                                    spine.set_color('#374151')
+                                ax_conc.grid(True, alpha=0.2, color='#374151', axis='y')
+                                
+                                # Format y-axis for scientific notation
+                                ax_conc.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))
+                                
+                                st.pyplot(fig_conc_mpl)
+                                plt.close()
+                        else:
+                            st.warning("No valid concentration data for plotting.")
+                    else:
+                        st.info("Concentration or position columns not detected.")
+                
+                with viz_tabs[2]:
+                    # Position Analysis (11-position uniformity)
+                    st.markdown("**Position-by-Position Analysis**")
+                    
+                    # Show all data in a styled table (handle non-unique index/columns)
+                    try:
+                        # Reset index and ensure unique columns for styling
+                        df_display = df_nta.reset_index(drop=True).copy()
+                        # Make columns unique if there are duplicates
+                        if df_display.columns.duplicated().any():
+                            df_display.columns = [f"{col}_{i}" if df_display.columns[:i].tolist().count(col) > 0 else col 
+                                                  for i, col in enumerate(df_display.columns)]
+                        
+                        numeric_cols = [c for c in df_display.columns if df_display[c].dtype in ['float64', 'int64', 'float32', 'int32']]
+                        if numeric_cols:
+                            st.dataframe(
+                                df_display.style.background_gradient(cmap='Blues', subset=numeric_cols),
+                                use_container_width=True
+                            )
+                        else:
+                            st.dataframe(df_display, use_container_width=True)
+                    except Exception:
+                        # Fallback: display without styling if styling fails
+                        st.dataframe(df_nta, use_container_width=True)
+                    
+                    # Check for uniformity (CV analysis)
+                    if possible_conc_cols:
+                        conc_col = possible_conc_cols[0]
+                        conc_data = pd.to_numeric(df_nta[conc_col].astype(str).str.replace('E', 'e'), errors='coerce').dropna()
+                        if len(conc_data) > 1:
+                            cv_conc = (conc_data.std() / conc_data.mean()) * 100
+                            if cv_conc < 20:
+                                st.success(f"✅ Good uniformity! Concentration CV: {cv_conc:.1f}% (< 20%)")
+                            elif cv_conc < 30:
+                                st.warning(f"⚠️ Moderate uniformity. Concentration CV: {cv_conc:.1f}% (20-30%)")
+                            else:
+                                st.error(f"❌ Poor uniformity. Concentration CV: {cv_conc:.1f}% (> 30%)")
+                
+                with viz_tabs[3]:
+                    # Corrected View Tab - Detailed temperature correction analysis
+                    st.markdown("### 🌡️ Temperature-Viscosity Correction Analysis")
+                    
+                    if use_nta_corrections:
+                        if not nta_correction_active:
+                            st.info("💡 Enable temperature correction in the sidebar to see corrected data.")
+                            st.markdown("""
+                            **Why correct for temperature?**
+                            
+                            NTA instruments calculate particle size from diffusion coefficients using the Stokes-Einstein equation:
+                            
+                            $$D = \\frac{k_B T}{3\\pi \\eta d}$$
+                            
+                            Where:
+                            - $D$ = diffusion coefficient
+                            - $k_B$ = Boltzmann constant
+                            - $T$ = absolute temperature
+                            - $\\eta$ = viscosity of the medium
+                            - $d$ = hydrodynamic diameter
+                            
+                            If the measurement temperature differs from the reference temperature (usually 25°C), 
+                            or if the medium viscosity differs from water, the calculated size needs correction.
+                            """)
+                            
+                            # Show reference tables
+                            st.markdown("#### 📊 Reference Tables")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown("**Water Viscosity vs Temperature**")
+                                visc_table = get_viscosity_temperature_table(15, 40, 5)
+                                st.dataframe(
+                                    visc_table[['Temperature (°C)', 'Viscosity (mPa·s)']].style.format({
+                                        'Viscosity (mPa·s)': '{:.4f}'
+                                    }),
+                                    use_container_width=True,
+                                    hide_index=True
+                                )
+                            
+                            with col2:
+                                st.markdown("**Correction Factors (ref = 25°C)**")
+                                corr_table = get_correction_reference_table([18, 20, 22, 25, 30, 37], 25.0)
+                                st.dataframe(
+                                    corr_table[['Measurement T (°C)', 'Correction Factor', 'Size Change (%)']].style.format({
+                                        'Correction Factor': '{:.4f}',
+                                        'Size Change (%)': '{:+.2f}'
+                                    }),
+                                    use_container_width=True,
+                                    hide_index=True
+                                )
+                        else:
+                            # Correction is active - show detailed analysis
+                            st.success(f"✅ Temperature correction active: {st.session_state.get('nta_measurement_temp', 25):.1f}°C → {st.session_state.get('nta_reference_temp', 25):.1f}°C")
+                            
+                            # Correction details
+                            st.markdown("#### 📋 Correction Parameters")
+                            param_cols = st.columns(4)
+                            
+                            with param_cols[0]:
+                                st.metric("Measurement Temp", f"{st.session_state.get('nta_measurement_temp', 25):.1f}°C")
+                            with param_cols[1]:
+                                st.metric("Reference Temp", f"{st.session_state.get('nta_reference_temp', 25):.1f}°C")
+                            with param_cols[2]:
+                                st.metric("Medium", st.session_state.get('nta_media_type', 'water'))
+                            with param_cols[3]:
+                                st.metric("Correction Factor", f"{nta_correction_factor:.4f}")
+                            
+                            # If size data available, show comprehensive comparison
+                            if possible_size_cols:
+                                size_col = possible_size_cols[0]
+                                size_data_raw = pd.to_numeric(df_nta[size_col], errors='coerce').dropna()
+                                size_data_raw = size_data_raw[(size_data_raw > 0) & (size_data_raw < 1000)]
+                                
+                                if len(size_data_raw) > 0:
+                                    size_data_corrected = size_data_raw * nta_correction_factor
+                                    
+                                    st.markdown("#### 📊 Side-by-Side Comparison")
+                                    
+                                    # Create side-by-side histogram
+                                    fig_compare, axes = plt.subplots(1, 2, figsize=(12, 5))
+                                    fig_compare.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
+                                    
+                                    for ax in axes:
+                                        ax.set_facecolor('#111827')
+                                        for spine in ax.spines.values():
+                                            spine.set_color('#374151')
+                                        ax.tick_params(colors='#94a3b8')
+                                    
+                                    # Raw histogram
+                                    axes[0].hist(size_data_raw, bins=20, color='#64748b', edgecolor='#94a3b8', alpha=0.8)
+                                    raw_d50 = np.percentile(size_data_raw, 50)
+                                    axes[0].axvline(raw_d50, color='#f72585', linestyle='--', linewidth=2, label=f'D50: {raw_d50:.1f} nm')
+                                    axes[0].set_xlabel("Particle Size (nm)", color='#f8fafc')
+                                    axes[0].set_ylabel("Count", color='#f8fafc')
+                                    axes[0].set_title("Raw Data", color='#f8fafc', fontweight='bold')
+                                    axes[0].legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc')
+                                    axes[0].grid(True, alpha=0.2, color='#374151')
+                                    
+                                    # Corrected histogram
+                                    axes[1].hist(size_data_corrected, bins=20, color='#00b4d8', edgecolor='#0096c7', alpha=0.8)
+                                    corr_d50 = np.percentile(size_data_corrected, 50)
+                                    axes[1].axvline(corr_d50, color='#f72585', linestyle='--', linewidth=2, label=f'D50: {corr_d50:.1f} nm')
+                                    axes[1].set_xlabel("Particle Size (nm)", color='#f8fafc')
+                                    axes[1].set_ylabel("Count", color='#f8fafc')
+                                    axes[1].set_title("Corrected Data", color='#f8fafc', fontweight='bold')
+                                    axes[1].legend(facecolor='#1f2937', edgecolor='#374151', labelcolor='#f8fafc')
+                                    axes[1].grid(True, alpha=0.2, color='#374151')
+                                    
+                                    plt.tight_layout()
+                                    st.pyplot(fig_compare)
+                                    plt.close()
+                                    
+                                    # Detailed statistics table
+                                    st.markdown("#### 📈 Detailed Statistics Comparison")
+                                    
+                                    stats_comparison = pd.DataFrame({
+                                        'Statistic': ['D10', 'D25', 'D50 (Median)', 'D75', 'D90', 'Mean', 'Std Dev', 'CV (%)'],
+                                        'Raw (nm)': [
+                                            np.percentile(size_data_raw, 10),
+                                            np.percentile(size_data_raw, 25),
+                                            np.percentile(size_data_raw, 50),
+                                            np.percentile(size_data_raw, 75),
+                                            np.percentile(size_data_raw, 90),
+                                            size_data_raw.mean(),
+                                            size_data_raw.std(),
+                                            (size_data_raw.std() / size_data_raw.mean()) * 100
+                                        ],
+                                        'Corrected (nm)': [
+                                            np.percentile(size_data_corrected, 10),
+                                            np.percentile(size_data_corrected, 25),
+                                            np.percentile(size_data_corrected, 50),
+                                            np.percentile(size_data_corrected, 75),
+                                            np.percentile(size_data_corrected, 90),
+                                            size_data_corrected.mean(),
+                                            size_data_corrected.std(),
+                                            (size_data_corrected.std() / size_data_corrected.mean()) * 100
+                                        ],
+                                        'Change (%)': [
+                                            (np.percentile(size_data_corrected, 10) - np.percentile(size_data_raw, 10)) / np.percentile(size_data_raw, 10) * 100,
+                                            (np.percentile(size_data_corrected, 25) - np.percentile(size_data_raw, 25)) / np.percentile(size_data_raw, 25) * 100,
+                                            (np.percentile(size_data_corrected, 50) - np.percentile(size_data_raw, 50)) / np.percentile(size_data_raw, 50) * 100,
+                                            (np.percentile(size_data_corrected, 75) - np.percentile(size_data_raw, 75)) / np.percentile(size_data_raw, 75) * 100,
+                                            (np.percentile(size_data_corrected, 90) - np.percentile(size_data_raw, 90)) / np.percentile(size_data_raw, 90) * 100,
+                                            (size_data_corrected.mean() - size_data_raw.mean()) / size_data_raw.mean() * 100,
+                                            (size_data_corrected.std() - size_data_raw.std()) / size_data_raw.std() * 100,
+                                            0  # CV doesn't change with linear scaling
+                                        ]
+                                    })
+                                    
+                                    st.dataframe(
+                                        stats_comparison.style.format({
+                                            'Raw (nm)': '{:.2f}',
+                                            'Corrected (nm)': '{:.2f}',
+                                            'Change (%)': '{:+.2f}'
+                                        }).background_gradient(cmap='RdYlGn', subset=['Change (%)'], vmin=-10, vmax=10),
+                                        use_container_width=True,
+                                        hide_index=True
+                                    )
+                                    
+                                    # Stokes-Einstein explanation
+                                    with st.expander("ℹ️ About the Correction"):
+                                        st.markdown(f"""
+                                        **Stokes-Einstein Correction Applied**
+                                        
+                                        The correction adjusts particle sizes based on temperature and viscosity differences:
+                                        
+                                        - **Measurement conditions:** {st.session_state.get('nta_measurement_temp', 25):.1f}°C, {st.session_state.get('nta_media_type', 'water')}
+                                        - **Reference conditions:** {st.session_state.get('nta_reference_temp', 25):.1f}°C, water
+                                        - **Viscosity at measurement temp:** {st.session_state.get('nta_media_viscosity', 0.001)*1000:.4f} mPa·s
+                                        - **Viscosity at reference temp:** {calculate_water_viscosity(st.session_state.get('nta_reference_temp', 25))*1000:.4f} mPa·s
+                                        
+                                        **Correction formula:**
+                                        
+                                        $$d_{{corrected}} = d_{{raw}} \\times \\frac{{\\eta_{{ref}}}}{{\\eta_{{meas}}}} \\times \\frac{{T_{{meas}}}}{{T_{{ref}}}}$$
+                                        
+                                        Where $\\eta$ is viscosity (Pa·s) and $T$ is temperature (K).
+                                        """)
+                                else:
+                                    st.warning("No valid size data available for correction analysis.")
+                            else:
+                                st.info("No size column detected in the data.")
+                    else:
+                        st.error("NTA corrections module not available. Please check that `src/physics/nta_corrections.py` exists.")
+                
+                # =====================================================================
+                # EXPORT OPTIONS
+                # =====================================================================
+                st.markdown("---")
+                st.markdown("#### 💾 Export Options")
+                
+                # Prepare export data with optional corrections
+                df_export = df_nta.copy()
+                
+                # Add corrected columns if corrections are enabled and size column exists
+                if nta_correction_active and use_nta_corrections and possible_size_cols:
+                    for size_col in possible_size_cols:
+                        raw_sizes = pd.to_numeric(df_export[size_col], errors='coerce')
+                        df_export[f"{size_col}_corrected"] = raw_sizes * nta_correction_factor
+                    
+                    # Add correction metadata as attributes (will show in header comment)
+                    export_note = f"Corrected at {st.session_state.get('nta_measurement_temp', 25):.1f}°C → {st.session_state.get('nta_reference_temp', 25):.1f}°C (factor: {nta_correction_factor:.4f})"
+                else:
+                    export_note = "No temperature correction applied"
+                
+                export_cols = st.columns(4)
+                
+                with export_cols[0]:
+                    # Export as CSV
+                    csv_data = df_export.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        "⬇️ Download as CSV",
+                        data=csv_data,
+                        file_name=f"nta_analysis_{uploaded_file_nta.name.replace('.txt', '')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+                
+                with export_cols[1]:
+                    # Export as Parquet (if pyarrow available)
+                    if use_pyarrow:
+                        parquet_buffer = io.BytesIO()
+                        df_export.to_parquet(parquet_buffer, index=False)
+                        st.download_button(
+                            "⬇️ Download as Parquet",
+                            data=parquet_buffer.getvalue(),
+                            file_name=f"nta_analysis_{uploaded_file_nta.name.replace('.txt', '')}.parquet",
+                            mime="application/octet-stream",
+                            use_container_width=True
+                        )
+                    else:
+                        st.button("⬇️ Parquet (requires pyarrow)", disabled=True, use_container_width=True)
+                
+                with export_cols[2]:
+                    # Generate summary report (with correction info)
+                    summary_text = f"""# NTA Analysis Report
+File: {uploaded_file_nta.name}
+Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Summary Statistics
+- Total Measurements: {len(df_nta)}
+- Temperature Correction: {export_note}
+"""
+                    if possible_size_cols:
+                        size_col = possible_size_cols[0]
+                        size_data_raw = pd.to_numeric(df_nta[size_col], errors='coerce').dropna()
+                        size_data_raw = size_data_raw[(size_data_raw > 0) & (size_data_raw < 1000)]
+                        if len(size_data_raw) > 0:
+                            summary_text += f"""
+## Size Distribution (Raw)
+- D10: {np.percentile(size_data_raw, 10):.1f} nm
+- D50 (Median): {np.percentile(size_data_raw, 50):.1f} nm
+- D90: {np.percentile(size_data_raw, 90):.1f} nm
+- Mean: {size_data_raw.mean():.1f} nm
+- Std Dev: {size_data_raw.std():.1f} nm
+"""
+                            # Add corrected stats if enabled
+                            if nta_correction_active and use_nta_corrections:
+                                size_data_corr = size_data_raw * nta_correction_factor
+                                summary_text += f"""
+## Size Distribution (Corrected)
+- D10: {np.percentile(size_data_corr, 10):.1f} nm
+- D50 (Median): {np.percentile(size_data_corr, 50):.1f} nm
+- D90: {np.percentile(size_data_corr, 90):.1f} nm
+- Mean: {size_data_corr.mean():.1f} nm
+- Std Dev: {size_data_corr.std():.1f} nm
+
+## Correction Parameters
+- Measurement Temperature: {st.session_state.get('nta_measurement_temp', 25):.1f}°C
+- Reference Temperature: {st.session_state.get('nta_reference_temp', 25):.1f}°C
+- Medium: {st.session_state.get('nta_media_type', 'water')}
+- Viscosity at Measurement Temp: {st.session_state.get('nta_media_viscosity', 0.001)*1000:.4f} mPa·s
+- Correction Factor: {nta_correction_factor:.4f}
+"""
+                    
+                    st.download_button(
+                        "📄 Download Report",
+                        data=summary_text.encode('utf-8'),
+                        file_name=f"nta_report_{uploaded_file_nta.name.replace('.txt', '')}.md",
+                        mime="text/markdown",
+                        use_container_width=True
+                    )
+                
+                with export_cols[3]:
+                    # Export correction reference table if corrections module available
+                    if use_nta_corrections:
+                        ref_table = get_correction_reference_table([18, 20, 22, 25, 30, 37], 25.0)
+                        ref_csv = ref_table.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            "📊 Correction Reference",
+                            data=ref_csv,
+                            file_name="nta_correction_reference.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
+                    else:
+                        st.button("📊 Correction Reference", disabled=True, use_container_width=True)
+                
+                # Store in session state for potential cross-tab analysis
+                st.session_state['nta_data'] = df_export
+                st.session_state['nta_filename'] = uploaded_file_nta.name
+                st.session_state['nta_raw_data'] = df_nta
+                if nta_correction_active:
+                    st.session_state['nta_correction_applied'] = True
+                
+            else:
+                st.warning("Could not parse the uploaded file. Please check the file format.")
+                
+        except Exception as e:
+            st.error(f"Error processing NTA file: {str(e)}")
+            with st.expander("🔍 Error Details", expanded=False):
+                import traceback
+                st.code(traceback.format_exc())
     else:
         # Show Best Practices collapsed if no file yet
-        st.info("📤 Please upload an NTA file to show best practices.")
+        st.info("📤 Please upload an NTA file to begin analysis.")
+
+
+# -------------------------
+# TAB 4: Cross-Instrument Comparison
+# -------------------------
+if st.session_state.active_tab == "🔬 Cross-Comparison":
+    st.markdown("""
+    <div style='text-align: center; padding: 20px;'>
+        <h1 style='color: #00b4d8;'>🔬 Cross-Instrument Comparison</h1>
+        <p style='color: #94a3b8; font-size: 1.1em;'>
+            Compare the same sample across FCS (NanoFACS) and NTA (ZetaView) instruments
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Check if both FCS and NTA data are available
+    has_fcs_data = 'fcs_data' in st.session_state and st.session_state['fcs_data'] is not None
+    has_nta_data = 'nta_data' in st.session_state and st.session_state['nta_data'] is not None
+    
+    # Reset button for Cross-Comparison
+    if has_fcs_data or has_nta_data:
+        reset_cols = st.columns([4, 1])
+        with reset_cols[1]:
+            if st.button("🔄 Clear All Data", key="reset_comparison_tab", use_container_width=True, help="Clear both FCS and NTA data to start fresh"):
+                keys_to_clear = [
+                    'fcs_data', 'fcs_filename', 'fcs_fsc_col', 'fcs_ssc_col',
+                    'fcs_analysis_complete', 'fcs_results_df', 'fcs_diameters',
+                    'fcs_theoretical_ratios', 'fcs_analysis_params', 'fcs_anomaly_mask',
+                    'nta_data', 'nta_raw_data', 'nta_filename', 'nta_correction_enabled',
+                    'nta_correction_factor', 'nta_measurement_temp', 'nta_reference_temp'
+                ]
+                for key in keys_to_clear:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.success("All comparison data cleared! Go to FCS or NTA tabs to upload new data.")
+                st.rerun()
+    
+    # Sidebar options for comparison
+    with st.sidebar:
+        st.markdown('<div class="section-header"><div class="section-icon">⚙️</div><h3>Comparison Settings</h3></div>', unsafe_allow_html=True)
+        
+        # Discrepancy threshold
+        discrepancy_threshold = st.slider(
+            "Discrepancy Threshold (%)",
+            min_value=5,
+            max_value=30,
+            value=15,
+            step=5,
+            help="Highlight measurements that differ by more than this percentage"
+        )
+        
+        # Histogram settings
+        st.markdown("**Histogram Settings**")
+        normalize_histograms = st.checkbox("Normalize Distributions", value=True, help="Show as probability density")
+        bin_size = st.slider("Bin Size (nm)", min_value=2, max_value=20, value=5)
+        
+        # Advanced options
+        with st.expander("🔧 Advanced Options", expanded=False):
+            show_kde = st.checkbox("Show KDE Overlay", value=True, help="Kernel Density Estimation curves")
+            show_statistics = st.checkbox("Show Statistical Tests", value=True, help="KS test, Mann-Whitney U test")
+            min_size_filter = st.number_input("Min Size (nm)", value=0, min_value=0, max_value=100)
+            max_size_filter = st.number_input("Max Size (nm)", value=500, min_value=100, max_value=1000)
+    
+    # Main content area
+    if has_fcs_data and has_nta_data:
+        st.success("✅ Both FCS and NTA data are loaded. Ready for comparison!")
+        
+        fcs_df = st.session_state['fcs_data']
+        nta_df = st.session_state['nta_data']
+        
+        # Extract file names
+        fcs_filename = st.session_state.get('fcs_filename', 'FCS Sample')
+        nta_filename = st.session_state.get('nta_filename', 'NTA Sample')
+        
+        # Sample info cards
+        info_cols = st.columns(2)
+        with info_cols[0]:
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, rgba(0,180,216,0.2), rgba(0,180,216,0.05)); 
+                        border: 1px solid rgba(0,180,216,0.3); border-radius: 12px; padding: 20px;'>
+                <h3 style='color: #00b4d8; margin-bottom: 10px;'>🧪 FCS Data</h3>
+                <p style='color: #f8fafc; margin: 5px 0;'><strong>File:</strong> {fcs_filename}</p>
+                <p style='color: #94a3b8; margin: 5px 0;'>Events: {len(fcs_df):,}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with info_cols[1]:
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(124,58,237,0.05)); 
+                        border: 1px solid rgba(124,58,237,0.3); border-radius: 12px; padding: 20px;'>
+                <h3 style='color: #7c3aed; margin-bottom: 10px;'>⚛ NTA Data</h3>
+                <p style='color: #f8fafc; margin: 5px 0;'><strong>File:</strong> {nta_filename}</p>
+                <p style='color: #94a3b8; margin: 5px 0;'>Measurements: {len(nta_df):,}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Extract size data from FCS
+        fcs_sizes = None
+        possible_fcs_size_cols = [col for col in fcs_df.columns if any(s in col.lower() for s in ['size', 'diameter', 'fsc', 'forward'])]
+        if possible_fcs_size_cols:
+            fcs_size_col = st.selectbox("FCS Size Column", options=possible_fcs_size_cols, key="fcs_size_col_select")
+            fcs_sizes = pd.to_numeric(fcs_df[fcs_size_col], errors='coerce').dropna().values
+            # Apply filters
+            fcs_sizes = fcs_sizes[(fcs_sizes >= min_size_filter) & (fcs_sizes <= max_size_filter)]
+        
+        # Extract size data from NTA
+        nta_sizes = None
+        possible_nta_size_cols = [col for col in nta_df.columns if any(s in col.lower() for s in ['size', 'diameter', 'mean', 'median', 'mode', 'd50', 'nm'])]
+        if possible_nta_size_cols:
+            nta_size_col = st.selectbox("NTA Size Column", options=possible_nta_size_cols, key="nta_size_col_select")
+            nta_sizes = pd.to_numeric(nta_df[nta_size_col], errors='coerce').dropna().values
+            # Apply filters
+            nta_sizes = nta_sizes[(nta_sizes >= min_size_filter) & (nta_sizes <= max_size_filter)]
+        
+        # Comparison Visualizations
+        if fcs_sizes is not None and len(fcs_sizes) > 0 and nta_sizes is not None and len(nta_sizes) > 0:
+            st.markdown("### 📊 Size Distribution Comparison")
+            
+            # Visualization tabs
+            viz_tabs = st.tabs(["📊 Overlay Histogram", "🌊 KDE Comparison", "📈 Statistics", "📉 Discrepancy Analysis"])
+            
+            with viz_tabs[0]:
+                # Overlay Histogram
+                if use_cross_comparison:
+                    fig_overlay = create_size_overlay_histogram(
+                        fcs_sizes=fcs_sizes,
+                        nta_sizes=nta_sizes,
+                        fcs_label=f"FCS ({fcs_filename})",
+                        nta_label=f"NTA ({nta_filename})",
+                        title="Size Distribution Overlay",
+                        bin_size=bin_size,
+                        normalize=normalize_histograms
+                    )
+                    st.plotly_chart(fig_overlay, use_container_width=True)
+                else:
+                    # Fallback matplotlib version
+                    fig, ax = plt.subplots(figsize=(12, 6))
+                    ax.hist(fcs_sizes, bins=50, alpha=0.6, label=f'FCS ({len(fcs_sizes):,} events)', color='#00b4d8')
+                    ax.hist(nta_sizes, bins=50, alpha=0.6, label=f'NTA ({len(nta_sizes):,} particles)', color='#7c3aed')
+                    ax.set_xlabel('Size (nm)')
+                    ax.set_ylabel('Count')
+                    ax.set_title('Size Distribution Overlay')
+                    ax.legend()
+                    ax.set_facecolor('#111827')
+                    fig.patch.set_facecolor('#111827')
+                    ax.tick_params(colors='white')
+                    ax.xaxis.label.set_color('white')
+                    ax.yaxis.label.set_color('white')
+                    ax.title.set_color('white')
+                    st.pyplot(fig)
+                    plt.close()
+            
+            with viz_tabs[1]:
+                # KDE Comparison
+                if use_cross_comparison and show_kde:
+                    fig_kde = create_kde_comparison(
+                        fcs_sizes=fcs_sizes,
+                        nta_sizes=nta_sizes,
+                        fcs_label=f"FCS ({fcs_filename})",
+                        nta_label=f"NTA ({nta_filename})",
+                        title="Size Distribution (Kernel Density Estimation)",
+                        x_range=(min_size_filter, max_size_filter)
+                    )
+                    st.plotly_chart(fig_kde, use_container_width=True)
+                else:
+                    st.info("Enable 'Show KDE Overlay' in sidebar to view Kernel Density Estimation curves.")
+            
+            with viz_tabs[2]:
+                # Statistical Comparison
+                st.markdown("#### 📈 Statistical Summary")
+                
+                # Calculate statistics
+                fcs_d10 = np.percentile(fcs_sizes, 10)
+                fcs_d50 = np.percentile(fcs_sizes, 50)
+                fcs_d90 = np.percentile(fcs_sizes, 90)
+                fcs_mean = np.mean(fcs_sizes)
+                fcs_std = np.std(fcs_sizes)
+                
+                nta_d10 = np.percentile(nta_sizes, 10)
+                nta_d50 = np.percentile(nta_sizes, 50)
+                nta_d90 = np.percentile(nta_sizes, 90)
+                nta_mean = np.mean(nta_sizes)
+                nta_std = np.std(nta_sizes)
+                
+                # Create comparison DataFrame
+                comparison_df = pd.DataFrame({
+                    'Metric': ['D10 (nm)', 'D50 (nm)', 'D90 (nm)', 'Mean (nm)', 'Std Dev (nm)', 'Count'],
+                    'FCS': [f"{fcs_d10:.1f}", f"{fcs_d50:.1f}", f"{fcs_d90:.1f}", f"{fcs_mean:.1f}", f"{fcs_std:.1f}", f"{len(fcs_sizes):,}"],
+                    'NTA': [f"{nta_d10:.1f}", f"{nta_d50:.1f}", f"{nta_d90:.1f}", f"{nta_mean:.1f}", f"{nta_std:.1f}", f"{len(nta_sizes):,}"],
+                    'Difference (%)': [
+                        f"{abs(fcs_d10 - nta_d10) / ((fcs_d10 + nta_d10) / 2) * 100:.1f}%",
+                        f"{abs(fcs_d50 - nta_d50) / ((fcs_d50 + nta_d50) / 2) * 100:.1f}%",
+                        f"{abs(fcs_d90 - nta_d90) / ((fcs_d90 + nta_d90) / 2) * 100:.1f}%",
+                        f"{abs(fcs_mean - nta_mean) / ((fcs_mean + nta_mean) / 2) * 100:.1f}%",
+                        f"{abs(fcs_std - nta_std) / ((fcs_std + nta_std) / 2) * 100:.1f}%",
+                        "-"
+                    ]
+                })
+                
+                st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+                
+                # Statistical tests
+                if show_statistics:
+                    st.markdown("#### 🧪 Statistical Tests")
+                    
+                    from scipy import stats as scipy_stats
+                    
+                    # Kolmogorov-Smirnov test
+                    ks_result = scipy_stats.ks_2samp(fcs_sizes, nta_sizes)
+                    ks_stat = float(ks_result.statistic)
+                    ks_pval = float(ks_result.pvalue)
+                    
+                    # Mann-Whitney U test
+                    mw_result = scipy_stats.mannwhitneyu(fcs_sizes, nta_sizes, alternative='two-sided')
+                    mw_stat = float(mw_result.statistic)
+                    mw_pval = float(mw_result.pvalue)
+                    
+                    test_cols = st.columns(2)
+                    with test_cols[0]:
+                        ks_color = "#10b981" if ks_pval > 0.05 else "#ef4444"
+                        st.markdown(f"""
+                        <div style='background: #1f2937; border-radius: 12px; padding: 20px; border: 1px solid {ks_color};'>
+                            <h4 style='color: #f8fafc;'>Kolmogorov-Smirnov Test</h4>
+                            <p style='color: #94a3b8; margin: 5px 0;'>Tests if distributions are different</p>
+                            <p style='color: #f8fafc; font-size: 1.2em;'>Statistic: <strong>{ks_stat:.4f}</strong></p>
+                            <p style='color: {ks_color}; font-size: 1.2em;'>p-value: <strong>{ks_pval:.2e}</strong></p>
+                            <p style='color: #94a3b8;'>{'✅ Distributions appear similar (p > 0.05)' if ks_pval > 0.05 else '⚠️ Distributions appear different (p ≤ 0.05)'}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with test_cols[1]:
+                        mw_color = "#10b981" if mw_pval > 0.05 else "#ef4444"
+                        st.markdown(f"""
+                        <div style='background: #1f2937; border-radius: 12px; padding: 20px; border: 1px solid {mw_color};'>
+                            <h4 style='color: #f8fafc;'>Mann-Whitney U Test</h4>
+                            <p style='color: #94a3b8; margin: 5px 0;'>Tests if medians are different</p>
+                            <p style='color: #f8fafc; font-size: 1.2em;'>Statistic: <strong>{mw_stat:.0f}</strong></p>
+                            <p style='color: {mw_color}; font-size: 1.2em;'>p-value: <strong>{mw_pval:.2e}</strong></p>
+                            <p style='color: #94a3b8;'>{'✅ Medians appear similar (p > 0.05)' if mw_pval > 0.05 else '⚠️ Medians appear different (p ≤ 0.05)'}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            with viz_tabs[3]:
+                # Discrepancy Analysis
+                st.markdown("#### 📉 Discrepancy Analysis")
+                
+                # Calculate discrepancies
+                discrepancies = {
+                    'D10': abs(fcs_d10 - nta_d10) / ((fcs_d10 + nta_d10) / 2) * 100,
+                    'D50': abs(fcs_d50 - nta_d50) / ((fcs_d50 + nta_d50) / 2) * 100,
+                    'D90': abs(fcs_d90 - nta_d90) / ((fcs_d90 + nta_d90) / 2) * 100,
+                    'Mean': abs(fcs_mean - nta_mean) / ((fcs_mean + nta_mean) / 2) * 100,
+                }
+                
+                if use_cross_comparison:
+                    fcs_vals = {'D10': fcs_d10, 'D50': fcs_d50, 'D90': fcs_d90, 'Mean': fcs_mean}
+                    nta_vals = {'D10': nta_d10, 'D50': nta_d50, 'D90': nta_d90, 'Mean': nta_mean}
+                    fig_disc = create_discrepancy_chart(
+                        fcs_values=fcs_vals,
+                        nta_values=nta_vals,
+                        threshold_pct=discrepancy_threshold,
+                        title="Measurement Discrepancy Analysis"
+                    )
+                    st.plotly_chart(fig_disc, use_container_width=True)
+                else:
+                    # Fallback bar chart
+                    fig, ax = plt.subplots(figsize=(10, 5))
+                    colors = ['#10b981' if v <= discrepancy_threshold else '#ef4444' for v in discrepancies.values()]
+                    ax.bar(discrepancies.keys(), discrepancies.values(), color=colors)
+                    ax.axhline(y=discrepancy_threshold, color='#ef4444', linestyle='--', label=f'Threshold ({discrepancy_threshold}%)')
+                    ax.set_ylabel('Discrepancy (%)')
+                    ax.set_title('Measurement Discrepancy Analysis')
+                    ax.legend()
+                    ax.set_facecolor('#111827')
+                    fig.patch.set_facecolor('#111827')
+                    ax.tick_params(colors='white')
+                    ax.xaxis.label.set_color('white')
+                    ax.yaxis.label.set_color('white')
+                    ax.title.set_color('white')
+                    st.pyplot(fig)
+                    plt.close()
+                
+                # Summary assessment
+                high_discrepancies = [k for k, v in discrepancies.items() if v > discrepancy_threshold]
+                if not high_discrepancies:
+                    st.success(f"✅ All measurements are within the {discrepancy_threshold}% threshold. Good agreement between instruments!")
+                else:
+                    st.warning(f"⚠️ The following metrics exceed the {discrepancy_threshold}% threshold: {', '.join(high_discrepancies)}")
+                    st.info("""
+                    **Possible reasons for discrepancies:**
+                    - Different detection principles (light scatter vs. diffusion)
+                    - Sample preparation differences
+                    - Concentration effects on NTA accuracy
+                    - Refractive index assumptions in FCS
+                    """)
+            
+            # Export options
+            st.markdown("---")
+            st.markdown("### 💾 Export Comparison Results")
+            
+            export_cols = st.columns(3)
+            
+            with export_cols[0]:
+                # Export comparison table as CSV
+                export_df = comparison_df.copy()
+                csv_data = export_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    "⬇️ Download Comparison Table",
+                    data=csv_data,
+                    file_name="cross_instrument_comparison.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            
+            with export_cols[1]:
+                # Export combined size data
+                combined_sizes = pd.DataFrame({
+                    'FCS_Size_nm': pd.Series(fcs_sizes),
+                    'NTA_Size_nm': pd.Series(nta_sizes)
+                })
+                combined_csv = combined_sizes.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    "⬇️ Download Size Data",
+                    data=combined_csv,
+                    file_name="cross_instrument_sizes.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            
+            with export_cols[2]:
+                # Generate comparison report
+                report_text = f"""# Cross-Instrument Comparison Report
+Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Files Compared
+- **FCS:** {fcs_filename}
+- **NTA:** {nta_filename}
+
+## Size Distribution Statistics
+
+| Metric | FCS | NTA | Difference |
+|--------|-----|-----|------------|
+| D10 (nm) | {fcs_d10:.1f} | {nta_d10:.1f} | {discrepancies['D10']:.1f}% |
+| D50 (nm) | {fcs_d50:.1f} | {nta_d50:.1f} | {discrepancies['D50']:.1f}% |
+| D90 (nm) | {fcs_d90:.1f} | {nta_d90:.1f} | {discrepancies['D90']:.1f}% |
+| Mean (nm) | {fcs_mean:.1f} | {nta_mean:.1f} | {discrepancies['Mean']:.1f}% |
+| Std Dev (nm) | {fcs_std:.1f} | {nta_std:.1f} | - |
+| Count | {len(fcs_sizes):,} | {len(nta_sizes):,} | - |
+
+## Assessment
+Threshold: {discrepancy_threshold}%
+{'✅ All measurements within threshold' if not high_discrepancies else f"⚠️ Exceeds threshold: {', '.join(high_discrepancies)}"}
+
+## Statistical Tests
+- Kolmogorov-Smirnov: stat={ks_stat:.4f}, p={ks_pval:.2e}
+- Mann-Whitney U: stat={mw_stat:.0f}, p={mw_pval:.2e}
+"""
+                st.download_button(
+                    "📄 Download Report",
+                    data=report_text.encode('utf-8'),
+                    file_name="cross_instrument_report.md",
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+        
+        else:
+            st.warning("Could not extract size data from the loaded datasets. Please check the column selection.")
+    
+    elif has_fcs_data and not has_nta_data:
+        st.info("""
+        📊 **FCS data loaded** - Now upload NTA data to enable comparison.
+        
+        Go to the **⚛ Nanoparticle Tracking** tab to upload NTA data.
+        """)
+        
+        # Show FCS summary
+        if 'fcs_data' in st.session_state:
+            fcs_df = st.session_state['fcs_data']
+            st.markdown("### 🧪 Current FCS Data Summary")
+            st.write(f"- **File:** {st.session_state.get('fcs_filename', 'Unknown')}")
+            st.write(f"- **Events:** {len(fcs_df):,}")
+            st.write(f"- **Columns:** {', '.join(fcs_df.columns[:5])}...")
+    
+    elif has_nta_data and not has_fcs_data:
+        st.info("""
+        ⚛ **NTA data loaded** - Now upload FCS data to enable comparison.
+        
+        Go to the **🧪 Flow Cytometry** tab to upload FCS data.
+        """)
+        
+        # Show NTA summary
+        if 'nta_data' in st.session_state:
+            nta_df = st.session_state['nta_data']
+            st.markdown("### ⚛ Current NTA Data Summary")
+            st.write(f"- **File:** {st.session_state.get('nta_filename', 'Unknown')}")
+            st.write(f"- **Measurements:** {len(nta_df):,}")
+            st.write(f"- **Columns:** {', '.join(nta_df.columns[:5])}...")
+    
+    else:
+        # No data loaded
+        st.markdown("""
+        <div style='background: #1f2937; border-radius: 16px; padding: 40px; text-align: center; margin: 40px 0;'>
+            <h2 style='color: #f8fafc; margin-bottom: 20px;'>📤 Upload Data to Begin</h2>
+            <p style='color: #94a3b8; font-size: 1.1em; margin-bottom: 30px;'>
+                To compare FCS and NTA measurements, first upload data from both instruments:
+            </p>
+            <div style='display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;'>
+                <div style='background: rgba(0,180,216,0.1); border: 1px solid rgba(0,180,216,0.3); 
+                            border-radius: 12px; padding: 25px; width: 280px;'>
+                    <h3 style='color: #00b4d8;'>1️⃣ Flow Cytometry</h3>
+                    <p style='color: #94a3b8;'>Go to <strong>🧪 Flow Cytometry</strong> tab</p>
+                    <p style='color: #64748b;'>Upload .fcs file</p>
+                </div>
+                <div style='background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3); 
+                            border-radius: 12px; padding: 25px; width: 280px;'>
+                    <h3 style='color: #7c3aed;'>2️⃣ Nanoparticle Tracking</h3>
+                    <p style='color: #94a3b8;'>Go to <strong>⚛ Nanoparticle Tracking</strong> tab</p>
+                    <p style='color: #64748b;'>Upload .txt or .csv file</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Best practices for comparison
+        with st.expander("📚 Cross-Instrument Comparison Best Practices", expanded=False):
+            st.markdown("""
+            ### 🎯 Sample Preparation
+            - Use the **same sample aliquot** for both instruments when possible
+            - Record dilution factors - concentration affects NTA accuracy
+            - Note temperature - affects viscosity and diffusion calculations
+            
+            ### 🔬 Measurement Considerations
+            - **FCS (NanoFACS):** Measures light scatter, affected by refractive index
+            - **NTA (ZetaView):** Measures Brownian motion, affected by viscosity
+            
+            ### 📊 Expected Differences
+            - D50 values typically agree within **±15%** for homogeneous samples
+            - Polydisperse samples may show larger differences
+            - Size range sensitivity differs: NTA better at smaller sizes, FCS handles larger particles
+            
+            ### ⚠️ Common Issues
+            1. **Large discrepancies (>20%)**: Check sample preparation, dilution factors
+            2. **Bimodal distributions**: May indicate aggregation or heterogeneous populations
+            3. **Concentration mismatch**: NTA requires optimal concentration (~10⁷-10⁹ particles/mL)
+            """)
 

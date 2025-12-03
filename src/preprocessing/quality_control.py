@@ -99,7 +99,7 @@ class QualityControl:
         # ACTION: Mark as 'fail' - this sample cannot be analyzed
         negative_events = fcs_data['total_events'] <= 0
         fcs_data.loc[negative_events, 'qc_status'] = 'fail'
-        fcs_data.loc[negative_events, 'qc_flags'] += 'negative_events;'
+        fcs_data.loc[negative_events, 'qc_flags'] = fcs_data.loc[negative_events, 'qc_flags'].astype(str) + 'negative_events;'
         
         # ============================================================
         # Check 1b: Minimum Event Count Threshold
@@ -113,7 +113,7 @@ class QualityControl:
         MIN_EVENTS_THRESHOLD = 1000  # Minimum viable event count
         low_events = (fcs_data['total_events'] > 0) & (fcs_data['total_events'] < MIN_EVENTS_THRESHOLD)
         fcs_data.loc[low_events, 'qc_status'] = 'fail'
-        fcs_data.loc[low_events, 'qc_flags'] += 'low_event_count;'
+        fcs_data.loc[low_events, 'qc_flags'] = fcs_data.loc[low_events, 'qc_flags'].astype(str) + 'low_event_count;'
         
         # ============================================================
         # Check 2: Invalid Scatter Values
@@ -128,7 +128,7 @@ class QualityControl:
                 # Check for: value <= 0 OR value is NaN (missing)
                 invalid = (fcs_data[channel] <= 0) | (pd.isna(fcs_data[channel]))
                 fcs_data.loc[invalid, 'qc_status'] = 'fail'
-                fcs_data.loc[invalid, 'qc_flags'] += f'{channel}_invalid;'
+                fcs_data.loc[invalid, 'qc_flags'] = fcs_data.loc[invalid, 'qc_flags'].astype(str) + f'{channel}_invalid;'
         
         # ============================================================
         # Check 3: Extreme Coefficient of Variation (CV)
@@ -147,13 +147,13 @@ class QualityControl:
             # Example: mean=1000, std=1200 → CV=120% (very heterogeneous)
             extreme_cv = cv > 100
             fcs_data.loc[extreme_cv, 'qc_status'] = 'warn'
-            fcs_data.loc[extreme_cv, 'qc_flags'] += 'extreme_cv;'
+            fcs_data.loc[extreme_cv, 'qc_flags'] = fcs_data.loc[extreme_cv, 'qc_flags'].astype(str) + 'extreme_cv;'
         
         # Check 4: Detect blank/control samples (very low event counts)
         median_events = fcs_data['total_events'].median()
         blank_threshold = median_events * 0.01  # 1% of median
         blanks = fcs_data['total_events'] < blank_threshold
-        fcs_data.loc[blanks, 'qc_flags'] += 'possible_blank;'
+        fcs_data.loc[blanks, 'qc_flags'] = fcs_data.loc[blanks, 'qc_flags'].astype(str) + 'possible_blank;'
         
         passed = fcs_data[fcs_data['qc_status'] == 'pass'].copy()
         failed = fcs_data[fcs_data['qc_status'] == 'fail'].copy()
@@ -200,32 +200,32 @@ class QualityControl:
         if temp_col is not None:
             temp_out_of_range = (nta_data[temp_col] < self.temp_min) | (nta_data[temp_col] > self.temp_max)
             nta_data.loc[temp_out_of_range, 'qc_status'] = 'fail'
-            nta_data.loc[temp_out_of_range, 'qc_flags'] += 'temp_out_of_range;'
+            nta_data.loc[temp_out_of_range, 'qc_flags'] = nta_data.loc[temp_out_of_range, 'qc_flags'].astype(str) + 'temp_out_of_range;'
         
         # Check 2: Invalid size measurements
         if 'mean_size' in nta_data.columns:
             invalid_size = (nta_data['mean_size'] <= 0) | (pd.isna(nta_data['mean_size']))
             nta_data.loc[invalid_size, 'qc_status'] = 'fail'
-            nta_data.loc[invalid_size, 'qc_flags'] += 'invalid_size;'
+            nta_data.loc[invalid_size, 'qc_flags'] = nta_data.loc[invalid_size, 'qc_flags'].astype(str) + 'invalid_size;'
         
         # Check 3: Invalid concentration
         if 'concentration' in nta_data.columns:
             invalid_conc = (nta_data['concentration'] < 0) | (pd.isna(nta_data['concentration']))
             nta_data.loc[invalid_conc, 'qc_status'] = 'fail'
-            nta_data.loc[invalid_conc, 'qc_flags'] += 'invalid_concentration;'
+            nta_data.loc[invalid_conc, 'qc_flags'] = nta_data.loc[invalid_conc, 'qc_flags'].astype(str) + 'invalid_concentration;'
         
         # Check 4: Unrealistic size distribution (D90/D10 ratio > 10)
         if 'D90' in nta_data.columns and 'D10' in nta_data.columns:
             size_ratio = nta_data['D90'] / nta_data['D10']
             extreme_poly = size_ratio > 10
             nta_data.loc[extreme_poly, 'qc_status'] = 'warn'
-            nta_data.loc[extreme_poly, 'qc_flags'] += 'extreme_polydispersity;'
+            nta_data.loc[extreme_poly, 'qc_flags'] = nta_data.loc[extreme_poly, 'qc_flags'].astype(str) + 'extreme_polydispersity;'
         
         # Check 5: Low particle count (< 100 particles)
         if 'particle_count' in nta_data.columns:
             low_count = nta_data['particle_count'] < 100
             nta_data.loc[low_count, 'qc_status'] = 'warn'
-            nta_data.loc[low_count, 'qc_flags'] += 'low_particle_count;'
+            nta_data.loc[low_count, 'qc_flags'] = nta_data.loc[low_count, 'qc_flags'].astype(str) + 'low_particle_count;'
         
         passed = nta_data[nta_data['qc_status'] == 'pass'].copy()
         failed = nta_data[nta_data['qc_status'] == 'fail'].copy()

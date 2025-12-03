@@ -1,4 +1,4 @@
-﻿"""
+"""
 NTA Visualization Module
 
 Generates size distribution plots and concentration analysis for Nanoparticle Tracking Analysis (NTA) data.
@@ -12,6 +12,7 @@ Task: 1.3.2 - NTA Size Distribution Analysis
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import seaborn as sns
 from pathlib import Path
 from typing import Optional, List, Tuple
@@ -53,7 +54,7 @@ class NTAPlotter:
         title: Optional[str] = None,
         output_file: Optional[Path] = None,
         show_stats: bool = True
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create size distribution histogram with statistics.
         
@@ -99,14 +100,14 @@ class NTAPlotter:
         - Recommended by MISEV2018 guidelines (Minimal Information for Studies of EVs)
         - Percentiles are robust to outliers (unlike mean)
         - Example interpretation:
-          D10=65nm, D50=85nm, D90=110nm → mostly 65-110nm range
+          D10=65nm, D50=85nm, D90=110nm ? mostly 65-110nm range
         
         EXAMPLE USE CASE:
         -----------------
         Quality check: Are particles in expected exosome size range (40-150nm)?
-        - If D50 < 40nm → Too small (protein aggregates?)
-        - If D50 > 150nm → Too large (cell debris? microvesicles?)
-        - If D50 ≈ 80-100nm → Good! Typical exosome range
+        - If D50 < 40nm ? Too small (protein aggregates?)
+        - If D50 > 150nm ? Too large (cell debris? microvesicles?)
+        - If D50 � 80-100nm ? Good! Typical exosome range
         """
         fig, ax = plt.subplots(figsize=(10, 6))
         
@@ -182,7 +183,7 @@ class NTAPlotter:
         data: pd.DataFrame,
         title: Optional[str] = None,
         output_file: Optional[Path] = None
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create cumulative size distribution curve.
         
@@ -247,7 +248,7 @@ class NTAPlotter:
         data: pd.DataFrame,
         title: Optional[str] = None,
         output_file: Optional[Path] = None
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create scatter plot of concentration vs particle size.
         
@@ -286,9 +287,9 @@ class NTAPlotter:
         - Problem: Wide spread indicates sample heterogeneity or measurement issues
         
         Example interpretations:
-        - All positions at 80-90nm, 10^10 particles/mL → Homogeneous sample ✅
-        - Position 1: 70nm, Position 5: 120nm → Sample not well-mixed ❌
-        - Some positions: very low concentration → Dilution error or particles settled ❌
+        - All positions at 80-90nm, 10^10 particles/mL ? Homogeneous sample ?
+        - Position 1: 70nm, Position 5: 120nm ? Sample not well-mixed ?
+        - Some positions: very low concentration ? Dilution error or particles settled ?
         
         BIOLOGICAL CONTEXT:
         -------------------
@@ -344,7 +345,7 @@ class NTAPlotter:
         self,
         data: pd.DataFrame,
         output_file: Optional[Path] = None
-    ) -> plt.Figure:
+    ) -> Figure:
         """
         Create 2x2 summary plot for NTA data.
         
@@ -476,7 +477,7 @@ def generate_nta_plots(parquet_file: Path, output_dir: Path = Path("figures/nta"
     # Close all figures to free memory
     plt.close('all')
     
-    logger.success(f"Γ£à Plots generated for {sample_id}")
+    logger.success(f"G�� Plots generated for {sample_id}")
 
 
 if __name__ == "__main__":

@@ -208,8 +208,9 @@ class FCSBatchVisualizer:
             n_cols = 3
             n_rows = (n_channels + n_cols - 1) // n_cols
             
-            fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 4))
-            axes = axes.flatten() if n_channels > 1 else [axes]
+            fig, axes_obj = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 4))
+            from matplotlib.axes import Axes
+            axes: list[Axes] = list(np.ravel(axes_obj)) if n_channels > 1 else [axes_obj]  # type: ignore[list-item]
             
             for idx, channel in enumerate(channels):
                 ax = axes[idx]
