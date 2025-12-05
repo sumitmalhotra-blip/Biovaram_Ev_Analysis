@@ -1707,8 +1707,72 @@ else:
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = "📊 Dashboard"
 
+# Initialize pinned graphs storage
+if "pinned_graphs" not in st.session_state:
+    st.session_state.pinned_graphs = []
+
 # Tab names for consistency
 TAB_NAMES = ["📊 Dashboard", "🧪 Flow Cytometry", "⚛ Nanoparticle Tracking", "🔬 Cross-Comparison"]
+
+
+def pin_graph_to_dashboard(graph_id: str, title: str, figure, source_tab: str, graph_type: str = "plotly") -> None:
+    """
+    Pin a graph to the Dashboard for persistent viewing.
+    
+    Args:
+        graph_id: Unique identifier for the graph
+        title: Display title for the pinned graph
+        figure: The plotly figure object to pin
+        source_tab: Which tab the graph came from
+        graph_type: Type of graph ('plotly' or 'matplotlib')
+    """
+    import datetime
+    
+    # Check if graph is already pinned
+    existing_ids = [g['id'] for g in st.session_state.pinned_graphs]
+    if graph_id in existing_ids:
+        st.toast(f"📌 '{title}' is already pinned!", icon="ℹ️")
+        return
+    
+    # Add to pinned graphs
+    pinned_graph = {
+        'id': graph_id,
+        'title': title,
+        'source_tab': source_tab,
+        'figure': figure,
+        'graph_type': graph_type,
+        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    st.session_state.pinned_graphs.append(pinned_graph)
+    st.toast(f"📌 Pinned '{title}' to Dashboard!", icon="✅")
+
+
+def unpin_graph_from_dashboard(graph_id: str) -> None:
+    """Remove a graph from the Dashboard."""
+    st.session_state.pinned_graphs = [
+        g for g in st.session_state.pinned_graphs if g['id'] != graph_id
+    ]
+    st.toast(f"📌 Graph unpinned from Dashboard", icon="🗑️")
+
+
+def render_pin_button(graph_id: str, title: str, figure, source_tab: str, key_suffix: str = "") -> None:
+    """
+    Render a pin button for a graph.
+    
+    Args:
+        graph_id: Unique identifier for the graph
+        title: Display title for the pinned graph
+        figure: The plotly figure object to pin
+        source_tab: Which tab the graph came from
+        key_suffix: Additional suffix for unique button key
+    """
+    is_pinned = graph_id in [g['id'] for g in st.session_state.pinned_graphs]
+    button_label = "📌 Pinned" if is_pinned else "📌 Pin to Dashboard"
+    button_type = "primary" if is_pinned else "secondary"
+    
+    if st.button(button_label, key=f"pin_{graph_id}_{key_suffix}", type=button_type, disabled=is_pinned):
+        pin_graph_to_dashboard(graph_id, title, figure, source_tab)
+        st.rerun()
 
 # Function to handle tab change
 def change_tab(tab_name: str):
@@ -1814,16 +1878,59 @@ if st.session_state.active_tab == "📊 Dashboard":
     left_col, right_col = st.columns([3, 1])
 
     with left_col:
+        # =====================================================
+        # PINNED GRAPHS SECTION
+        # =====================================================
+        if st.session_state.pinned_graphs:
+            st.markdown('<div class="section-header"><div class="section-icon">📌</div><h4>Pinned Graphs</h4></div>', unsafe_allow_html=True)
+            st.caption(f"{len(st.session_state.pinned_graphs)} graph(s) pinned to dashboard")
+            
+            # Display each pinned graph
+            for idx, pinned in enumerate(st.session_state.pinned_graphs):
+                with st.container():
+                    # Graph header with unpin button
+                    header_col1, header_col2 = st.columns([4, 1])
+                    with header_col1:
+                        st.markdown(f"**{pinned['title']}**")
+                        st.caption(f"Source: {pinned['source_tab']} | Pinned: {pinned['timestamp']}")
+                    with header_col2:
+                        if st.button("🗑️ Unpin", key=f"unpin_{pinned['id']}_{idx}", type="secondary"):
+                            unpin_graph_from_dashboard(pinned['id'])
+                            st.rerun()
+                    
+                    # Display the graph
+                    if pinned['graph_type'] == 'plotly' and pinned['figure'] is not None:
+                        try:
+                            plotly_config = get_export_config() if use_interactive_plots else {}
+                            st.plotly_chart(pinned['figure'], use_container_width=True, config=plotly_config, key=f"pinned_chart_{pinned['id']}_{idx}")
+                        except Exception as e:
+                            st.error(f"Error displaying pinned graph: {str(e)}")
+                    
+                    st.markdown("---")
+            
+            # Clear all pinned graphs button
+            if st.button("🗑️ Clear All Pinned Graphs", key="clear_all_pinned", type="secondary"):
+                st.session_state.pinned_graphs = []
+                st.toast("All pinned graphs cleared!", icon="🗑️")
+                st.rerun()
+        
+        # =====================================================
+        # STATIC IMAGE GRAPHS (LEGACY)
+        # =====================================================
         graph_files = [f for f in os.listdir("images") if f.endswith(".png")]
         if graph_files:
+            st.markdown('<div class="section-header"><div class="section-icon">🖼️</div><h4>Saved Images</h4></div>', unsafe_allow_html=True)
             for gf in graph_files[:2]:
                 st.image(os.path.join("images", gf), caption=gf, use_container_width=True)
-        else:
+        
+        # Show placeholder if no graphs at all
+        if not st.session_state.pinned_graphs and not graph_files:
             st.markdown("""
             <div class="glass-card" style="text-align: center; padding: 60px 40px;">
                 <div style="font-size: 56px; margin-bottom: 20px;">📊</div>
                 <h3 style="color: #f8fafc; margin-bottom: 12px;">No Graphs Generated Yet</h3>
                 <p style="color: #94a3b8; margin: 0;">Upload a dataset and run analysis to generate visualizations</p>
+                <p style="color: #64748b; margin-top: 10px; font-size: 14px;">💡 Tip: Pin graphs from other tabs using the 📌 button</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -2166,6 +2273,16 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
         
         # Quick preset buttons
         st.markdown("**Quick Presets:**")
+        
+        # EV Standard Categories (3 categories - Meeting Dec 3, 2025)
+        if st.button("📊 EV Standard (<50, 50-200, >200)", key="preset_ev_standard", use_container_width=True, help="Standard EV categorization: Small EVs/Exomeres, Exosomes, Microvesicles"):
+            st.session_state.custom_size_ranges = [
+                {"name": "Small EVs (<50nm)", "min": 0, "max": 50},
+                {"name": "Exosomes (50-200nm)", "min": 50, "max": 200},
+                {"name": "Microvesicles (>200nm)", "min": 200, "max": 1000},
+            ]
+            st.rerun()
+        
         preset_cols = st.columns(2)
         with preset_cols[0]:
             if st.button("30-100, 100-150", key="preset_1", use_container_width=True, help="Standard EV categorization"):
@@ -2762,7 +2879,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
         else:
             # Fallback to matplotlib
             fig_preview_mpl, ax_preview = plt.subplots(figsize=(10, 4))
-            fig_preview_mpl.patch.set_facecolor('#111827')
+            fig_preview_mpl.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
             ax_preview.set_facecolor('#111827')
             ax_preview.plot(preview_diameters, preview_ratios, color='#f72585', linewidth=2.5)
             ax_preview.set_xlabel("Diameter (nm)", color='#f8fafc', fontsize=12)
@@ -2874,22 +2991,23 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
 
                     st.success(f"Processing complete in {elapsed:.1f}s - processed {total} rows.")
 
-                    # Display stat cards
+                    # Display stat cards - Median is primary metric per Surya's feedback (Dec 3, 2025)
+                    # Mean is kept for modeling but Median is preferred for display
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
-                        mean_val = df['estimated_diameter_nm'].mean()
-                        st.markdown(f"""
-                        <div class="stat-card">
-                            <div class="stat-value">{mean_val:.1f}</div>
-                            <div class="stat-label">Mean Size (nm)</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with col2:
                         median_val = df['estimated_diameter_nm'].median()
                         st.markdown(f"""
                         <div class="stat-card">
                             <div class="stat-value">{median_val:.1f}</div>
                             <div class="stat-label">Median Size (nm)</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with col2:
+                        d50_val = np.percentile(df['estimated_diameter_nm'].dropna(), 50)
+                        st.markdown(f"""
+                        <div class="stat-card">
+                            <div class="stat-value">{d50_val:.1f}</div>
+                            <div class="stat-label">D50 (nm)</div>
                         </div>
                         """, unsafe_allow_html=True)
                     with col3:
@@ -3027,6 +3145,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                             title="Theoretical vs Measured FSC/SSC Ratio"
                         )
                         st.plotly_chart(fig1_plotly, use_container_width=True, config=plotly_config)
+                        render_pin_button("fcs_theoretical_vs_measured", "FCS: Theoretical vs Measured Ratio", fig1_plotly, "🧪 Flow Cytometry", "fcs1")
                         
                         # Plot 2: Size Distribution Histogram (Plotly)
                         size_ranges_for_plot = st.session_state.get("custom_size_ranges", None)
@@ -3039,6 +3158,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                             size_ranges=size_ranges_for_plot
                         )
                         st.plotly_chart(fig2_plotly, use_container_width=True, config=plotly_config)
+                        render_pin_button("fcs_size_distribution", "FCS: Particle Size Distribution", fig2_plotly, "🧪 Flow Cytometry", "fcs2")
                         
                         # Save static version for export (optional - requires kaleido)
                         try:
@@ -3253,6 +3373,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                                 title="FSC vs SSC Scatter Plot"
                             )
                             st.plotly_chart(fig3_plotly, use_container_width=True, config=plotly_config)
+                            render_pin_button("fcs_fsc_ssc_scatter", "FCS: FSC vs SSC Scatter", fig3_plotly, "🧪 Flow Cytometry", "fcs3")
                         else:
                             # Matplotlib static version
                             fig3, ax3 = plt.subplots(figsize=(8, 6))
@@ -3303,6 +3424,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                                 title=f"Estimated Diameter vs {ssc_col}"
                             )
                             st.plotly_chart(fig4_plotly, use_container_width=True, config=plotly_config)
+                            render_pin_button("fcs_diameter_vs_ssc", f"FCS: Diameter vs {ssc_col}", fig4_plotly, "🧪 Flow Cytometry", "fcs4")
                         else:
                             # Matplotlib static version
                             fig4, ax4 = plt.subplots(figsize=(10, 5))
@@ -3352,6 +3474,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                                 highlight_anomalies=highlight_anomalies
                             )
                             st.plotly_chart(dashboard_fig, use_container_width=True, config=plotly_config)
+                            render_pin_button("fcs_analysis_dashboard", "FCS: Full Analysis Dashboard", dashboard_fig, "🧪 Flow Cytometry", "fcs_dash")
 
                     # Download anomaly data if available
                     if anomaly_mask is not None and anomaly_mask.sum() > 0:
@@ -3458,22 +3581,22 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
         enable_anomaly_detection_cached = params.get('enable_anomaly', False)
         
         if df is not None and len(df) > 0:
-            # Display stat cards
+            # Display stat cards - Median is primary metric per Surya's feedback (Dec 3, 2025)
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                mean_val = df['estimated_diameter_nm'].mean()
-                st.markdown(f"""
-                <div class="stat-card">
-                    <div class="stat-value">{mean_val:.1f}</div>
-                    <div class="stat-label">Mean Size (nm)</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with col2:
                 median_val = df['estimated_diameter_nm'].median()
                 st.markdown(f"""
                 <div class="stat-card">
                     <div class="stat-value">{median_val:.1f}</div>
                     <div class="stat-label">Median Size (nm)</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                d50_val = np.percentile(df['estimated_diameter_nm'].dropna(), 50)
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-value">{d50_val:.1f}</div>
+                    <div class="stat-label">D50 (nm)</div>
                 </div>
                 """, unsafe_allow_html=True)
             with col3:
@@ -3549,6 +3672,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                     title="Theoretical vs Measured FSC/SSC Ratio"
                 )
                 st.plotly_chart(fig1_plotly, use_container_width=True, config=plotly_config)
+                render_pin_button("fcs_cached_theoretical", "FCS: Theoretical vs Measured (Cached)", fig1_plotly, "🧪 Flow Cytometry", "fcs_c1")
                 
                 # Plot 2: Size Distribution Histogram
                 size_ranges_for_plot = st.session_state.get("custom_size_ranges", None)
@@ -3561,6 +3685,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                     size_ranges=size_ranges_for_plot
                 )
                 st.plotly_chart(fig2_plotly, use_container_width=True, config=plotly_config)
+                render_pin_button("fcs_cached_size_dist", "FCS: Size Distribution (Cached)", fig2_plotly, "🧪 Flow Cytometry", "fcs_c2")
                 
                 # Anomaly Detection Results (if available)
                 if enable_anomaly_detection_cached and anomaly_mask is not None:
@@ -3617,6 +3742,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                                 title="FSC vs SSC (with Anomalies)"
                             )
                             st.plotly_chart(fig_fsc_ssc, use_container_width=True, config=plotly_config)
+                            render_pin_button("fcs_cached_fsc_ssc", "FCS: FSC vs SSC (Cached)", fig_fsc_ssc, "🧪 Flow Cytometry", "fcs_c3")
                         
                         with scatter_cols[1]:
                             if "estimated_diameter_nm" in df.columns:
@@ -3626,6 +3752,7 @@ if st.session_state.active_tab == "🧪 Flow Cytometry":
                                     title="Diameter vs SSC (with Anomalies)"
                                 )
                                 st.plotly_chart(fig_size_scatter, use_container_width=True, config=plotly_config)
+                                render_pin_button("fcs_cached_diameter_ssc", "FCS: Diameter vs SSC (Cached)", fig_size_scatter, "🧪 Flow Cytometry", "fcs_c4")
             
             else:
                 # Matplotlib static plots (cached)
@@ -3947,6 +4074,11 @@ if st.session_state.active_tab == "⚛ Nanoparticle Tracking":
                 st.error(f"Unsupported file format: {file_ext}")
                 df_nta = None
             
+            # Initialize column detection variables (will be populated if data is valid)
+            possible_size_cols: list[str] = []
+            possible_conc_cols: list[str] = []
+            possible_pos_cols: list[str] = []
+            
             if df_nta is not None and not df_nta.empty:
                 # Display data preview
                 st.markdown("#### 📋 Data Preview")
@@ -4083,10 +4215,11 @@ if st.session_state.active_tab == "⚛ Nanoparticle Tracking":
                                     corrected=is_corrected
                                 )
                                 st.plotly_chart(fig_size, use_container_width=True, config=plotly_config)
+                                render_pin_button("nta_size_distribution", "NTA: Particle Size Distribution", fig_size, "⚛ Nanoparticle Tracking", "nta1")
                             else:
                                 # Fallback to matplotlib
                                 fig_size_mpl, ax_size = plt.subplots(figsize=(10, 5))
-                                fig_size_mpl.patch.set_facecolor('#111827')
+                                fig_size_mpl.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
                                 ax_size.set_facecolor('#111827')
                                 ax_size.hist(size_data, bins=20, color='#00b4d8', edgecolor='#0096c7', alpha=0.8)
                                 
@@ -4125,6 +4258,105 @@ if st.session_state.active_tab == "⚛ Nanoparticle Tracking":
                             stat_cols[3].metric("Mean", f"{size_data.mean():.1f} nm")
                             stat_cols[4].metric("Std Dev", f"{size_data.std():.1f} nm")
                             
+                            # =====================================================
+                            # THREE SIZE CATEGORIES (<50nm, 50-200nm, >200nm)
+                            # =====================================================
+                            st.markdown("---")
+                            st.markdown(f"**Particle Size Categories{title_suffix}:**")
+                            
+                            # Calculate counts for each category
+                            small_particles = (size_data < 50).sum()  # <50nm (small EVs, exomeres)
+                            medium_particles = ((size_data >= 50) & (size_data <= 200)).sum()  # 50-200nm (exosomes)
+                            large_particles = (size_data > 200).sum()  # >200nm (microvesicles)
+                            total_particles = len(size_data)
+                            
+                            # Calculate percentages
+                            small_pct = (small_particles / total_particles) * 100 if total_particles > 0 else 0
+                            medium_pct = (medium_particles / total_particles) * 100 if total_particles > 0 else 0
+                            large_pct = (large_particles / total_particles) * 100 if total_particles > 0 else 0
+                            
+                            # Display as colorful stat cards
+                            cat_cols = st.columns(3)
+                            with cat_cols[0]:
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                                    <div class="stat-value" style="color: white;">{small_particles:,}</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">&lt;50 nm ({small_pct:.1f}%)</div>
+                                    <div style="color: rgba(255,255,255,0.7); font-size: 11px; margin-top: 4px;">Small EVs / Exomeres</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with cat_cols[1]:
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                    <div class="stat-value" style="color: white;">{medium_particles:,}</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">50-200 nm ({medium_pct:.1f}%)</div>
+                                    <div style="color: rgba(255,255,255,0.7); font-size: 11px; margin-top: 4px;">Exosomes</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            with cat_cols[2]:
+                                st.markdown(f"""
+                                <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                    <div class="stat-value" style="color: white;">{large_particles:,}</div>
+                                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">&gt;200 nm ({large_pct:.1f}%)</div>
+                                    <div style="color: rgba(255,255,255,0.7); font-size: 11px; margin-top: 4px;">Microvesicles</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            # Create a pie chart for size categories
+                            if use_interactive_plots:
+                                import plotly.graph_objects as go
+                                
+                                fig_pie = go.Figure(data=[go.Pie(
+                                    labels=['<50 nm<br>(Small EVs)', '50-200 nm<br>(Exosomes)', '>200 nm<br>(Microvesicles)'],
+                                    values=[small_particles, medium_particles, large_particles],
+                                    hole=0.4,
+                                    marker=dict(colors=['#06b6d4', '#8b5cf6', '#f59e0b']),
+                                    textinfo='percent+value',
+                                    textfont=dict(size=12, color='white'),
+                                    hovertemplate='<b>%{label}</b><br>Count: %{value:,}<br>Percentage: %{percent}<extra></extra>'
+                                )])
+                                
+                                fig_pie.update_layout(
+                                    title=dict(
+                                        text=f"Particle Size Distribution by Category{title_suffix}",
+                                        font=dict(size=16, color='#f8fafc'),
+                                        x=0.5
+                                    ),
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    font=dict(color='#f8fafc'),
+                                    showlegend=True,
+                                    legend=dict(
+                                        orientation='h',
+                                        yanchor='bottom',
+                                        y=-0.15,
+                                        xanchor='center',
+                                        x=0.5,
+                                        font=dict(size=11)
+                                    ),
+                                    margin=dict(t=60, b=60, l=20, r=20),
+                                    annotations=[dict(
+                                        text=f'Total<br>{total_particles:,}',
+                                        x=0.5, y=0.5,
+                                        font=dict(size=14, color='#f8fafc'),
+                                        showarrow=False
+                                    )]
+                                )
+                                
+                                st.plotly_chart(fig_pie, use_container_width=True, config=plotly_config)
+                                render_pin_button("nta_size_categories", "NTA: Size Category Distribution", fig_pie, "⚛ Nanoparticle Tracking", "nta_cat")
+                            
+                            # Summary interpretation
+                            dominant_category = max([
+                                ('<50 nm (Small EVs/Exomeres)', small_pct),
+                                ('50-200 nm (Exosomes)', medium_pct),
+                                ('>200 nm (Microvesicles)', large_pct)
+                            ], key=lambda x: x[1])
+                            
+                            st.info(f"📊 **Dominant population:** {dominant_category[0]} at {dominant_category[1]:.1f}% of total particles")
+                            
                             # If corrections are active, show comparison
                             if nta_correction_active and use_nta_corrections:
                                 with st.expander("📊 Raw vs Corrected Comparison", expanded=False):
@@ -4157,7 +4389,7 @@ if st.session_state.active_tab == "⚛ Nanoparticle Tracking":
                         else:
                             st.warning("No valid size data found in the file.")
                     else:
-                        st.info("No size column detected. Available columns: " + ", ".join(df_nta.columns.tolist()))
+                        st.info("No size column detected. Available columns: " + ", ".join(list(df_nta.columns)))
                 
                 with viz_tabs[1]:
                     # Concentration Profile
@@ -4179,10 +4411,11 @@ if st.session_state.active_tab == "⚛ Nanoparticle Tracking":
                                     title="Concentration by Position"
                                 )
                                 st.plotly_chart(fig_conc, use_container_width=True, config=plotly_config)
+                                render_pin_button("nta_concentration_profile", "NTA: Concentration by Position", fig_conc, "⚛ Nanoparticle Tracking", "nta2")
                             else:
                                 # Fallback to matplotlib
                                 fig_conc_mpl, ax_conc = plt.subplots(figsize=(10, 5))
-                                fig_conc_mpl.patch.set_facecolor('#111827')
+                                fig_conc_mpl.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
                                 ax_conc.set_facecolor('#111827')
                                 
                                 ax_conc.bar(pos_data[valid_mask], conc_data[valid_mask], color='#7c3aed', edgecolor='#a78bfa', alpha=0.8)
@@ -4696,6 +4929,7 @@ if st.session_state.active_tab == "🔬 Cross-Comparison":
                         normalize=normalize_histograms
                     )
                     st.plotly_chart(fig_overlay, use_container_width=True)
+                    render_pin_button("cross_overlay_histogram", "Cross-Comparison: Size Overlay", fig_overlay, "🔬 Cross-Comparison", "cross1")
                 else:
                     # Fallback matplotlib version
                     fig, ax = plt.subplots(figsize=(12, 6))
@@ -4706,11 +4940,11 @@ if st.session_state.active_tab == "🔬 Cross-Comparison":
                     ax.set_title('Size Distribution Overlay')
                     ax.legend()
                     ax.set_facecolor('#111827')
-                    fig.patch.set_facecolor('#111827')
+                    fig.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
                     ax.tick_params(colors='white')
                     ax.xaxis.label.set_color('white')
                     ax.yaxis.label.set_color('white')
-                    ax.title.set_color('white')
+                    ax.title.set_color('white')  # type: ignore[attr-defined]
                     st.pyplot(fig)
                     plt.close()
             
@@ -4726,6 +4960,7 @@ if st.session_state.active_tab == "🔬 Cross-Comparison":
                         x_range=(min_size_filter, max_size_filter)
                     )
                     st.plotly_chart(fig_kde, use_container_width=True)
+                    render_pin_button("cross_kde_comparison", "Cross-Comparison: KDE Curves", fig_kde, "🔬 Cross-Comparison", "cross2")
                 else:
                     st.info("Enable 'Show KDE Overlay' in sidebar to view Kernel Density Estimation curves.")
             
@@ -4771,13 +5006,13 @@ if st.session_state.active_tab == "🔬 Cross-Comparison":
                     
                     # Kolmogorov-Smirnov test
                     ks_result = scipy_stats.ks_2samp(fcs_sizes, nta_sizes)
-                    ks_stat = float(ks_result.statistic)
-                    ks_pval = float(ks_result.pvalue)
+                    ks_stat = float(ks_result[0])  # type: ignore[index]
+                    ks_pval = float(ks_result[1])  # type: ignore[index]
                     
                     # Mann-Whitney U test
                     mw_result = scipy_stats.mannwhitneyu(fcs_sizes, nta_sizes, alternative='two-sided')
-                    mw_stat = float(mw_result.statistic)
-                    mw_pval = float(mw_result.pvalue)
+                    mw_stat = float(mw_result[0])  # type: ignore[index]
+                    mw_pval = float(mw_result[1])  # type: ignore[index]
                     
                     test_cols = st.columns(2)
                     with test_cols[0]:
@@ -4826,6 +5061,7 @@ if st.session_state.active_tab == "🔬 Cross-Comparison":
                         title="Measurement Discrepancy Analysis"
                     )
                     st.plotly_chart(fig_disc, use_container_width=True)
+                    render_pin_button("cross_discrepancy", "Cross-Comparison: Discrepancy Analysis", fig_disc, "🔬 Cross-Comparison", "cross3")
                 else:
                     # Fallback bar chart
                     fig, ax = plt.subplots(figsize=(10, 5))
@@ -4836,11 +5072,11 @@ if st.session_state.active_tab == "🔬 Cross-Comparison":
                     ax.set_title('Measurement Discrepancy Analysis')
                     ax.legend()
                     ax.set_facecolor('#111827')
-                    fig.patch.set_facecolor('#111827')
+                    fig.patch.set_facecolor('#111827')  # type: ignore[attr-defined]
                     ax.tick_params(colors='white')
                     ax.xaxis.label.set_color('white')
                     ax.yaxis.label.set_color('white')
-                    ax.title.set_color('white')
+                    ax.title.set_color('white')  # type: ignore[attr-defined]
                     st.pyplot(fig)
                     plt.close()
                 

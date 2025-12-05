@@ -722,13 +722,13 @@ def calculate_comparison_stats(
     
     # Kolmogorov-Smirnov test for distribution similarity
     ks_result = stats.ks_2samp(fcs_clean, nta_clean)
-    ks_stat = float(ks_result.statistic)
-    ks_pval = float(ks_result.pvalue)
+    ks_stat = float(ks_result[0])  # statistic is first element
+    ks_pval = float(ks_result[1])  # pvalue is second element
     
     # Mann-Whitney U test
     mw_result = stats.mannwhitneyu(fcs_clean, nta_clean, alternative='two-sided')
-    mw_stat = float(mw_result.statistic)
-    mw_pval = float(mw_result.pvalue)
+    mw_stat = float(mw_result[0])  # statistic is first element
+    mw_pval = float(mw_result[1])  # pvalue is second element
     
     return {
         'fcs': fcs_stats,

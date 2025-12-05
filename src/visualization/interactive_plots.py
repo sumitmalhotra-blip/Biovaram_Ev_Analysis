@@ -290,7 +290,7 @@ def create_size_vs_scatter_plot(
     if anomaly_mask is None or not highlight_anomalies:
         fig.update_traces(marker=dict(color=DARK_THEME['success']))
     else:
-        fig.data[0].marker.color = DARK_THEME['success']
+        fig.data[0].marker.color = DARK_THEME['success']  # type: ignore[union-attr]
     
     return fig
 
@@ -726,13 +726,13 @@ def create_analysis_dashboard(
             row=2, col=1
         )
     
-    # Panel 4: Statistics Table
+    # Panel 4: Statistics Table - Median is primary metric (per Surya's feedback Dec 2025)
     stats_data = {
-        'Metric': ['Count', 'Mean (nm)', 'Median (nm)', 'Std Dev', 'Min (nm)', 'Max (nm)'],
+        'Metric': ['Count', 'Median (nm)', 'D50 (nm)', 'Std Dev', 'Min (nm)', 'Max (nm)'],
         'Value': [
             f"{len(sizes):,}",
-            f"{sizes.mean():.1f}",
             f"{sizes.median():.1f}",
+            f"{np.percentile(sizes, 50):.1f}",
             f"{sizes.std():.1f}",
             f"{sizes.min():.1f}",
             f"{sizes.max():.1f}"
@@ -768,9 +768,12 @@ def create_analysis_dashboard(
     fig.update_yaxes(title_text=ssc_col, title_font_size=11, row=2, col=1)
     
     # Update subplot title annotations for better positioning
-    for annotation in fig['layout']['annotations']:
-        annotation['font'] = dict(size=13, color=DARK_THEME['text_color'])
-        annotation['y'] = annotation['y'] + 0.02  # Move titles up slightly
+    annotations = fig.layout.annotations
+    if annotations:
+        for annotation in annotations:
+            annotation.font = dict(size=13, color=DARK_THEME['text_color'])
+            if annotation.y is not None:
+                annotation.y = annotation.y + 0.02  # Move titles up slightly
     
     fig.update_layout(
         height=800,

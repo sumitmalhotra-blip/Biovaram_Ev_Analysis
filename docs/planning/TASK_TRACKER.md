@@ -3,7 +3,7 @@
 **Project:** Extracellular Vesicle Analysis Platform  
 **Client:** Bio Varam via CRMIT  
 **Repository:** https://github.com/isumitmalhotra/CRMIT-Project-  
-**Last Updated:** January 2025 (Gap Analysis Update)
+**Last Updated:** December 4, 2025 (Post Weekly Connect)
 
 ---
 
@@ -13,13 +13,69 @@
 |-------|--------|----------|
 | Phase 1: Data Parsing | ✅ COMPLETE | 100% |
 | Phase 2: Analysis & Viz | ✅ COMPLETE | 100% |
-| Phase 2.5: UI Enhancements | 🔄 IN PROGRESS | 70% |
+| Phase 2.5: UI Enhancements | ✅ COMPLETE | 100% |
 | Phase 3: AI/ML | ⏳ BLOCKED | 0% (Waiting for credentials) |
 
-**Active Focus:** UI Enhancement Gaps (see Gap Analysis section below)  
-**Latest Completed:** GAP-5 NTA Parameter Corrections (December 2025)  
+**Active Focus:** NTA PDF Parsing (Waiting for PDF files from Surya)  
+**Latest Completed:** Three Size Categories, Dashboard Pinning, Mean→Median (December 2025)  
 **13 Integration Tests:** ✅ All Passing  
 **Type Errors:** ✅ 0 in Production Code
+
+---
+
+## 🎉 MEETING UPDATE - December 3, 2025 (Weekly Customer Connect)
+
+### Attendees: Sumit, Parvesh, Surya, Abhishek, Charmi
+
+### ✅ COMPLETED ITEMS SHOWN IN DEMO:
+1. **Interactive Plotly Graphs** - All graphs now interactive (zoom, pan, hover)
+2. **Cross-Comparison Tab** - FCS vs NTA comparison (in progress)
+3. **Experimental Conditions Input** - Form for user to enter metadata not in files
+
+### 🆕 NEW REQUIREMENTS FROM MEETING:
+
+#### 1. **Dashboard Pinning Feature** (HIGH PRIORITY)
+- **Requested by:** Parvesh
+- **Description:** Users can "pin" graphs to dashboard. Pinned graphs stay cached while generating new graphs.
+- **Status:** ✅ COMPLETED Dec 4, 2025
+- **Implementation:**
+  - Pin button (📌) appears below each Plotly graph
+  - Pinned graphs displayed on Dashboard tab with unpin button
+  - Graphs persist in session state while navigating tabs
+  - "Clear All Pinned Graphs" option available
+
+#### 2. **Replace Mean with Median for Display** (HIGH PRIORITY)
+- **Requested by:** Surya
+- **Description:** Median is preferred for display (always exists in dataset). Mean can be misleading.
+- **Note:** Keep Mean+StdDev for internal modeling, display Median to users.
+- **Status:** ✅ COMPLETED Dec 4, 2025
+
+#### 3. **NTA PDF Parsing** (MEDIUM PRIORITY)
+- **Requested by:** Surya
+- **Description:** NTA machine generates PDF with "Original Concentration" not in text/FCS files.
+- **Library:** PyPDF2
+- **Data to extract:** Original concentration, dilution factor, particle counts by size ranges
+- **Status:** ⏳ Waiting for PDF files from Surya
+
+#### 4. **Three Size Categories for NTA** (MEDIUM PRIORITY)
+- Particles <50 nm (Small EVs / Exomeres)
+- Particles 50-200 nm (Exosomes)
+- Particles >200 nm (Microvesicles)
+- **Status:** ✅ COMPLETED Dec 4, 2025
+- **Implementation:**
+  - Added automatic categorization in NTA Size Distribution tab
+  - Visual stat cards with counts and percentages for each category
+  - Interactive pie chart showing distribution
+  - Dominant population summary
+  - Added "EV Standard" preset button in FCS tab sidebar
+
+### 📥 DATA EXPECTED:
+- Surya will share NTA data + PDF files this week
+- NanoFACS data generation just started (~1 week)
+
+### ⏳ BLOCKERS:
+- AI/Data Cloud credentials still pending (Charmi following up)
+- Waiting for PDF files from Surya for NTA parsing
 
 ---
 
